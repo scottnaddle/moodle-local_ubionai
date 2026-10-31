@@ -28,12 +28,13 @@ use stdClass;
  */
 class helper {
     /** @var string[] Module types supported by create_module. */
-    public const SUPPORTED_MODULES = ['assign', 'quiz', 'forum'];
+    public const SUPPORTED_MODULES = ['assign', 'quiz', 'forum', 'page', 'resource', 'url'];
 
     /** @var string[] moduleinfo keys that callers may never override through the settings JSON. */
     private const PROTECTED_KEYS = [
         'id', 'course', 'module', 'modulename', 'coursemodule', 'instance', 'section', 'add', 'update',
-        'introeditor', 'intro', 'introformat', 'name', 'visible', 'return', 'sr',
+        'introeditor', 'intro', 'introformat', 'name', 'visible', 'return', 'sr', 'availabilityconditionsjson',
+        'completionunlocked', 'page',
     ];
 
     /** @var string[] Quiz review option field names (without the timing suffix). */
@@ -88,10 +89,13 @@ class helper {
      *
      * Mirrors the test generators and mod_form defaults so add_moduleinfo() never trips over missing fields.
      *
-     * @param string $modname assign, quiz or forum
+     * @param string $modname one of SUPPORTED_MODULES
      * @return array
      */
     public static function module_defaults(string $modname): array {
+        global $CFG;
+        require_once($CFG->libdir . '/resourcelib.php');
+
         $common = [
             'visibleoncoursepage' => 1,
             'cmidnumber' => '',
@@ -216,6 +220,49 @@ class helper {
                 ];
                 break;
 
+            case 'page':
+                $config = get_config('page');
+                $defaults = [
+                    'content' => '',
+                    'contentformat' => FORMAT_HTML,
+                    'display' => (int) ($config->display ?? RESOURCELIB_DISPLAY_OPEN),
+                    'popupwidth' => (int) ($config->popupwidth ?? 620),
+                    'popupheight' => (int) ($config->popupheight ?? 450),
+                    'printintro' => (int) ($config->printintro ?? 0),
+                    'printlastmodified' => (int) ($config->printlastmodified ?? 1),
+                    'revision' => 1,
+                ];
+                break;
+
+            case 'resource':
+                $config = get_config('resource');
+                $defaults = [
+                    'files' => 0,
+                    'display' => (int) ($config->display ?? RESOURCELIB_DISPLAY_AUTO),
+                    'popupwidth' => (int) ($config->popupwidth ?? 620),
+                    'popupheight' => (int) ($config->popupheight ?? 450),
+                    'printintro' => (int) ($config->printintro ?? 1),
+                    'showsize' => (int) ($config->showsize ?? 0),
+                    'showtype' => (int) ($config->showtype ?? 0),
+                    'showdate' => (int) ($config->showdate ?? 0),
+                    'filterfiles' => (int) ($config->filterfiles ?? 0),
+                    'revision' => 1,
+                    'tobemigrated' => 0,
+                    'legacyfiles' => 0, // RESOURCELIB_LEGACYFILES_NO.
+                ];
+                break;
+
+            case 'url':
+                $config = get_config('url');
+                $defaults = [
+                    'externalurl' => '',
+                    'display' => (int) ($config->display ?? RESOURCELIB_DISPLAY_AUTO),
+                    'popupwidth' => (int) ($config->popupwidth ?? 620),
+                    'popupheight' => (int) ($config->popupheight ?? 450),
+                    'printintro' => (int) ($config->printintro ?? 1),
+                ];
+                break;
+
             default:
                 throw new invalid_parameter_exception("Unsupported module type: {$modname}");
         }
@@ -237,6 +284,23 @@ class helper {
         }
         unset($settings['cutofftdate']);
 
+        if (array_key_exists('availability', $settings)) {
+            $availability = self::normalise_availability($settings['availability'], 'settings.availability');
+            unset($settings['availability']);
+            // update_moduleinfo() prefers availabilityconditionsjson ('' = none) over availability.
+            $moduleinfo->availability = $availability;
+            $moduleinfo->availabilityconditionsjson = $availability ?? '';
+        }
+        if (array_key_exists('completion', $settings)) {
+            $completion = $settings['completion'];
+            if (is_bool($completion) || !is_numeric($completion)
+                    || !in_array((int) $completion, [COMPLETION_TRACKING_NONE, COMPLETION_TRACKING_MANUAL,
+                        COMPLETION_TRACKING_AUTOMATIC], true)) {
+                throw new invalid_parameter_exception('settings.completion must be 0 (none), 1 (manual) or 2 (automatic)');
+            }
+            $settings['completion'] = (int) $completion;
+        }
+
         foreach ($settings as $key => $value) {
             if (!is_string($key) || !preg_match('/^[a-z0-9_]+$/', $key)) {
                 throw new invalid_parameter_exception("Invalid settings key: {$key}");
@@ -256,8 +320,18 @@ class helper {
             $moduleinfo->assessed = 1; // RATING_AGGREGATE_AVERAGE.
         }
 
-        // Turning on a completion rule implies automatic completion tracking.
-        if (!array_key_exists('completion', $settings)) {
+        if (array_key_exists('completion', $settings) && $settings['completion'] !== COMPLETION_TRACKING_AUTOMATIC) {
+            // Without automatic tracking no rule may stay active (mirrors moodleform_mod::data_postprocessing()).
+            foreach (self::COMPLETION_RULE_KEYS as $rule) {
+                if (!array_key_exists($rule, $settings) && property_exists($moduleinfo, $rule)) {
+                    $moduleinfo->$rule = 0;
+                }
+            }
+            if ($modname === 'quiz' && !array_key_exists('completionminattempts', $settings)) {
+                $moduleinfo->completionminattemptsenabled = 0;
+            }
+        } else if (!array_key_exists('completion', $settings)) {
+            // Turning on a completion rule implies automatic completion tracking.
             foreach (self::COMPLETION_RULE_KEYS as $rule) {
                 if (!empty($settings[$rule])) {
                     $moduleinfo->completion = COMPLETION_TRACKING_AUTOMATIC;
@@ -267,6 +341,80 @@ class helper {
         }
         if ($modname === 'quiz' && !empty($settings['completionminattempts'])) {
             $moduleinfo->completionminattemptsenabled = 1;
+        }
+    }
+
+    /**
+     * Validate an availability tree and return it as a JSON string.
+     *
+     * @param mixed $value JSON string, decoded object/array, or null/'' for "no restrictions"
+     * @param string $param parameter name, used in error messages
+     * @return string|null JSON, or null when there are no restrictions
+     * @throws invalid_parameter_exception
+     */
+    public static function normalise_availability($value, string $param): ?string {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+        if (is_string($value)) {
+            $decoded = json_decode($value);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new invalid_parameter_exception("{$param} must be valid JSON");
+            }
+        } else {
+            // Already decoded as part of the settings object: re-encode to get stdClass trees.
+            $decoded = json_decode(json_encode($value));
+        }
+        if (!is_object($decoded)) {
+            throw new invalid_parameter_exception("{$param} must be a JSON object (availability tree)");
+        }
+        try {
+            $tree = new \core_availability\tree($decoded);
+        } catch (\coding_exception $e) {
+            throw new invalid_parameter_exception("{$param} is not a valid availability tree: " . $e->getMessage());
+        }
+        return $tree->is_empty() ? null : json_encode($decoded);
+    }
+
+    /**
+     * Validate module-specific required settings before creating a module.
+     *
+     * @param stdClass $moduleinfo moduleinfo being built
+     * @param string $modname module name
+     * @param bool $creating whether the module is being created (resource files are then required)
+     * @throws invalid_parameter_exception
+     */
+    public static function validate_module_settings(stdClass $moduleinfo, string $modname, bool $creating): void {
+        global $USER;
+
+        if ($modname === 'url') {
+            $url = trim((string) ($moduleinfo->externalurl ?? ''));
+            if ($url === '' || clean_param($url, PARAM_URL) === '') {
+                throw new invalid_parameter_exception('settings.externalurl must be a valid URL');
+            }
+            $moduleinfo->externalurl = $url;
+        }
+        if ($modname === 'resource') {
+            $itemid = $moduleinfo->files ?? 0;
+            if (!is_numeric($itemid) || (int) $itemid < 0) {
+                throw new invalid_parameter_exception('settings.files must be a draft item id');
+            }
+            $moduleinfo->files = (int) $itemid;
+            if ($moduleinfo->files === 0 && $creating) {
+                throw new invalid_parameter_exception('settings.files (draft item id with the uploaded file) is required');
+            }
+            if ($moduleinfo->files !== 0) {
+                $usercontext = \context_user::instance($USER->id);
+                $files = get_file_storage()->get_area_files($usercontext->id, 'user', 'draft', $moduleinfo->files,
+                    'id', false);
+                if (!$files) {
+                    throw new invalid_parameter_exception(
+                        "settings.files: draft area {$moduleinfo->files} of the current user contains no files");
+                }
+            }
+        }
+        if ($modname === 'page' && isset($moduleinfo->content) && !is_string($moduleinfo->content)) {
+            throw new invalid_parameter_exception('settings.content must be an HTML string');
         }
     }
 
@@ -374,7 +522,97 @@ class helper {
                 $data->assignsubmission_file_maxfiles = $data->assignsubmission_file_maxfiles ?? 1;
                 $data->assignsubmission_file_maxsizebytes = $data->assignsubmission_file_maxsizebytes ?? 0;
                 break;
+
+            case 'page':
+            case 'resource':
+            case 'url':
+                // Display options are stored serialised; the update callbacks expect them as separate fields.
+                $displayoptions = (array) unserialize_array((string) ($data->displayoptions ?? ''));
+                $data->printintro = (int) !empty($displayoptions['printintro']);
+                $data->popupwidth = (int) ($displayoptions['popupwidth'] ?? 620);
+                $data->popupheight = (int) ($displayoptions['popupheight'] ?? 450);
+                if ($data->modulename === 'page') {
+                    $data->printlastmodified = (int) !empty($displayoptions['printlastmodified']);
+                    // No draft item: the stored content (with its @@PLUGINFILE@@ links) is kept as is.
+                    $data->page = ['text' => $data->content, 'format' => $data->contentformat, 'itemid' => 0];
+                } else if ($data->modulename === 'resource') {
+                    foreach (['showsize', 'showtype', 'showdate'] as $option) {
+                        $data->$option = (int) !empty($displayoptions[$option]);
+                    }
+                    // 0 = keep the existing files; a draft item id replaces them.
+                    $data->files = 0;
+                } else {
+                    $i = 0;
+                    foreach ((array) unserialize_array((string) ($data->parameters ?? '')) as $parameter => $variable) {
+                        $data->{'parameter_' . $i} = $parameter;
+                        $data->{'variable_' . $i} = $variable;
+                        $i++;
+                    }
+                }
+                break;
         }
+    }
+
+    /**
+     * Copy settings into the form-shaped fields that MODNAME_update_instance() reads, after apply_settings().
+     *
+     * @param stdClass $data update data
+     * @param array $settings decoded settings
+     */
+    public static function postprocess_update_data(stdClass $data, array $settings): void {
+        if ($data->modulename === 'page') {
+            if (array_key_exists('content', $settings)) {
+                $data->page['text'] = (string) $data->content;
+                $data->page['format'] = FORMAT_HTML;
+            }
+            if (array_key_exists('contentformat', $settings)) {
+                $data->page['format'] = (int) $data->contentformat;
+            }
+        }
+    }
+
+    /**
+     * Load a course section by number, with a clear error when it does not exist.
+     *
+     * @param stdClass $course course record
+     * @param int $sectionnum section number (not id)
+     * @return \section_info
+     * @throws invalid_parameter_exception
+     */
+    public static function get_section(stdClass $course, int $sectionnum): \section_info {
+        if ($sectionnum < 0) {
+            throw new invalid_parameter_exception('section must be >= 0');
+        }
+        $sectioninfo = get_fast_modinfo($course)->get_section_info($sectionnum, IGNORE_MISSING);
+        if (!$sectioninfo) {
+            throw new invalid_parameter_exception("Section {$sectionnum} does not exist in course {$course->id}");
+        }
+        return $sectioninfo;
+    }
+
+    /**
+     * Build the course_update_section() data for a section name and/or summary.
+     *
+     * @param string|null $name new name (null = unchanged, '' = default name)
+     * @param string|null $summary new summary HTML (null = unchanged)
+     * @return array
+     * @throws invalid_parameter_exception
+     */
+    public static function section_fields(?string $name, ?string $summary): array {
+        $data = [];
+        if ($name !== null) {
+            $name = trim($name);
+            if (\core_text::strlen($name) > 255) {
+                throw new invalid_parameter_exception('Section name must be at most 255 characters');
+            }
+            // An empty name falls back to the course format's default section name.
+            $data['name'] = $name === '' ? null : $name;
+        }
+        if ($summary !== null) {
+            $data['summary'] = $summary;
+            $data['summaryformat'] = FORMAT_HTML;
+        }
+        return $data;
     }
 
     /**

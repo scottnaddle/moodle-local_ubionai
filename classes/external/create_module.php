@@ -24,7 +24,7 @@ use invalid_parameter_exception;
 use local_grokbot\local\helper;
 
 /**
- * Create an assign, quiz or forum activity.
+ * Create an assign, quiz, forum, page, resource or url activity.
  *
  * @package    local_grokbot
  * @copyright  2026 scottnaddle
@@ -40,7 +40,7 @@ class create_module extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id'),
             'section' => new external_value(PARAM_INT, 'Section number (not id)'),
-            'modname' => new external_value(PARAM_PLUGIN, 'Module type: assign, quiz or forum'),
+            'modname' => new external_value(PARAM_PLUGIN, 'Module type: assign, quiz, forum, page, resource or url'),
             'name' => new external_value(PARAM_TEXT, 'Activity name'),
             'intro' => new external_value(PARAM_RAW, 'Description (HTML)', VALUE_DEFAULT, ''),
             'visible' => new external_value(PARAM_INT, '1 = visible, 0 = hidden', VALUE_DEFAULT, 1),
@@ -110,6 +110,7 @@ class create_module extends external_api {
         ];
         $moduleinfo->add = $params['modname'];
         helper::apply_settings($moduleinfo, $settingsdata, $params['modname']);
+        helper::validate_module_settings($moduleinfo, $params['modname'], true);
 
         $moduleinfo = create_module($moduleinfo);
 

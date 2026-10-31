@@ -27,14 +27,14 @@ defined('MOODLE_INTERNAL') || die();
 $functions = [
     'local_grokbot_create_module' => [
         'classname' => 'local_grokbot\external\create_module',
-        'description' => 'Create an assign, quiz or forum activity in a course section.',
+        'description' => 'Create an assign, quiz, forum, page, resource or url activity in a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities, mod/assign:addinstance, mod/quiz:addinstance, '
-            . 'mod/forum:addinstance',
+            . 'mod/forum:addinstance, mod/page:addinstance, mod/resource:addinstance, mod/url:addinstance',
     ],
     'local_grokbot_update_module' => [
         'classname' => 'local_grokbot\external\update_module',
-        'description' => 'Update name, intro, visibility and settings of an existing activity.',
+        'description' => 'Update name, intro, visibility, settings, completion and access restrictions of an activity.',
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities',
     ],
@@ -47,6 +47,18 @@ $functions = [
     'local_grokbot_update_section' => [
         'classname' => 'local_grokbot\external\update_section',
         'description' => 'Update the name and/or summary of a course section.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:update',
+    ],
+    'local_grokbot_add_sections' => [
+        'classname' => 'local_grokbot\external\add_sections',
+        'description' => 'Append named sections to a course.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:update',
+    ],
+    'local_grokbot_set_section_availability' => [
+        'classname' => 'local_grokbot\external\set_section_availability',
+        'description' => 'Set the access restrictions (availability JSON) of a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
     ],

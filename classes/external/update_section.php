@@ -20,7 +20,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
-use invalid_parameter_exception;
+use local_grokbot\local\helper;
 
 /**
  * Update the name and/or summary of a course section.
@@ -71,26 +71,15 @@ class update_section extends external_api {
         self::validate_context($context);
         require_capability('moodle/course:update', $context);
 
-        $sectionrecord = $DB->get_record('course_sections',
-            ['course' => $course->id, 'section' => $params['section']]);
-        if (!$sectionrecord) {
-            throw new invalid_parameter_exception("Section {$params['section']} does not exist in course {$course->id}");
-        }
-
-        $data = [];
-        if ($params['name'] !== null) {
-            $data['name'] = trim($params['name']);
-        }
-        if ($params['summary'] !== null) {
-            $data['summary'] = $params['summary'];
-            $data['summaryformat'] = FORMAT_HTML;
-        }
+        $sectioninfo = helper::get_section($course, $params['section']);
+        $data = helper::section_fields($params['name'], $params['summary']);
         if ($data) {
-            course_update_section($course, $sectionrecord, $data);
+            // Pass a plain record: course_update_section() writes the new values back onto it.
+            course_update_section($course, (object) ['id' => $sectioninfo->id], $data);
         }
 
         return [
-            'sectionid' => (int) $sectionrecord->id,
+            'sectionid' => (int) $sectioninfo->id,
             'updated' => !empty($data),
         ];
     }

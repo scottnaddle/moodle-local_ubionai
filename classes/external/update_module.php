@@ -104,6 +104,10 @@ class update_module extends external_api {
             unset($settingsdata['grade']);
         }
         helper::apply_settings($data, $settingsdata, $data->modulename);
+        helper::postprocess_update_data($data, $settingsdata);
+        if (in_array($data->modulename, helper::SUPPORTED_MODULES, true)) {
+            helper::validate_module_settings($data, $data->modulename, false);
+        }
 
         update_moduleinfo($cm, $data, $course);
 
