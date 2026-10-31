@@ -55,5 +55,15 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026103101, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026103104) {
+        // 0.4.0: tokens are now tracked by row id in the issued_token_ids config. Existing
+        // tokens from earlier versions are not adopted (they may have been issued manually);
+        // disconnect will leave them in place and warn. Start tracking from an empty list.
+        if (get_config('local_ubionai', 'issued_token_ids') === false) {
+            set_config('issued_token_ids', '', 'local_ubionai');
+        }
+        upgrade_plugin_savepoint(true, 2026103104, 'local', 'ubionai');
+    }
+
     return true;
 }

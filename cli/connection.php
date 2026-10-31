@@ -23,6 +23,7 @@
  */
 
 use local_ubionai\local\hub_client;
+use local_ubionai\local\ip_validator;
 use local_ubionai\local\provisioner;
 
 define('CLI_SCRIPT', true);
@@ -58,6 +59,10 @@ if ($regcode !== '' && $regcodefile !== '') {
     exit(2);
 }
 if (($regcode !== '' || $regcodefile !== '') && empty($options['connect'])) {
+    echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+    exit(2);
+}
+if (trim((string) $options['iprestriction']) !== '' && empty($options['connect'])) {
     echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
     exit(2);
 }
@@ -111,7 +116,13 @@ try {
             cli_writeln($key . ': ' . $value);
         }
     } else if (!empty($options['connect'])) {
-        $result = provisioner::provision((string) $options['iprestriction']);
+        try {
+            $iprestriction = ip_validator::normalise((string) $options['iprestriction']);
+        } catch (\invalid_parameter_exception $e) {
+            echo get_string('cli_iprestriction_invalid', 'local_ubionai', $e->getMessage()) . PHP_EOL;
+            exit(2);
+        }
+        $result = provisioner::provision($iprestriction);
         foreach ($result as $key => $value) {
             if ($key === 'skipped') {
                 $value = $value ? implode(', ', $value) : 'none';
@@ -136,8 +147,12 @@ try {
             }
         }
     } else {
-        $deleted = provisioner::disconnect();
-        cli_writeln('tokensdeleted: ' . $deleted);
+        $result = provisioner::disconnect();
+        cli_writeln('tokensdeleted: ' . (int) $result['deleted']);
+        cli_writeln('tokensuntracked: ' . (int) $result['untracked']);
+        if ($result['untracked'] > 0) {
+            cli_writeln(get_string('disconnect_untracked_warning', 'local_ubionai', $result['untracked']));
+        }
     }
 } catch (\Throwable $e) {
     cli_error($e->getMessage(), 1);

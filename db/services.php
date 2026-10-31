@@ -80,4 +80,11 @@ $functions = [
         'type' => 'write',
         'capabilities' => 'moodle/badges:createbadge, moodle/badges:configurecriteria',
     ],
+    'local_ubionai_get_course_assignments' => [
+        'classname' => 'local_ubionai\external\get_course_assignments',
+        'description' => 'List assignments of a course with grade settings, without requiring ' .
+            'enrolment in the course (mod_assign_get_assignments is enrolment-based).',
+        'type' => 'read',
+        'capabilities' => 'moodle/course:view, mod/assign:view',
+    ],
 ];

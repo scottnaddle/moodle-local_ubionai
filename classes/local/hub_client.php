@@ -122,7 +122,11 @@ class hub_client {
             if (!is_string($data->egress_ip)) {
                 return ['ok' => false, 'status' => 'bad_response', 'siteid' => null];
             }
-            $egressip = $data->egress_ip;
+            try {
+                $egressip = ip_validator::normalise($data->egress_ip);
+            } catch (\invalid_parameter_exception $e) {
+                return ['ok' => false, 'status' => 'bad_response', 'siteid' => null];
+            }
         }
 
         $bearer = \core\encryption::encrypt($data->mcp_bearer);

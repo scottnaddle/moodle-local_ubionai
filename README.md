@@ -162,6 +162,20 @@ drawn with GD (fallback `pix/badge.png`). `enable` activates the badge and award
 qualify. Returns `{badgeid, status, awards, warnings}`. Requires badges and course badges to be enabled, and
 `moodle/badges:createbadge` + `moodle/badges:configurecriteria`.
 
+### `local_ubionai_get_course_assignments`
+
+`courseid`. Returns `{courses: [{id, fullname, shortname, assignments: [...]}], warnings}` with
+the same top-level shape as `mod_assign_get_assignments`, so callers can merge the two. Each
+assignment carries `id`, `cmid`, `course`, `name`, `visible`, `section`, `duedate`,
+`allowsubmissionsfromdate`, `cutoffdate`, `gradingduedate`, the raw `grade` setting, `gradetype`
+(`point` \| `scale` \| `none`), `grademax`, `scaleid`, `gradepass`, `markingworkflow`,
+`markingallocation`, `teamsubmission`, `blindmarking`, `attemptreopenmethod` and `maxattempts`.
+
+Unlike the core `mod_assign_get_assignments` function, which only returns courses the caller is
+enrolled in, this function only requires `moodle/course:view` and `mod/assign:view` in the course
+context. That lets the service user list assignments for courses it is not enrolled in (for
+example to grade them). Requires both capabilities; hidden course modules are omitted.
+
 ## Setup
 
 1. Copy this directory to `public/local/ubionai` and run the upgrade.
@@ -184,11 +198,13 @@ The plugin can provision its own Moodle web service connection.
 * **Status page** — `/local/ubionai/connect.php` shows the connection state and has *Connect* and
   *Disconnect* buttons. *Connect* enables web services and REST, creates the `svc_ubionai` service
   user, the `ubionai_service` role, the restricted `ubionai` external service with its functions,
-  authorises the user and issues one permanent token. *Disconnect* deletes the token(s) but keeps the
-  user, role and service so reconnecting is cheap and idempotent; it also clears the stored hub
-  registration data. Disconnect does **not** remove the tenant from the hub, so the hub
-  administrator must delete it before registering the same site again (otherwise the hub returns
-  `already_registered` / HTTP 409).
+  authorises the user and issues one permanent token. Token row ids issued by the plugin are
+  tracked in the `issued_token_ids` config (ids only; the token string is never stored). *Disconnect*
+  deletes only those tracked tokens and leaves any other token of the service user in place,
+  warning about the count on the status page and in the CLI. It keeps the user, role and service so
+  reconnecting is cheap and idempotent; it also clears the stored hub registration data. Disconnect
+  does **not** remove the tenant from the hub, so the hub administrator must delete it before
+  registering the same site again (otherwise the hub returns `already_registered` / HTTP 409).
 * **CLI** — from the Moodle dirroot:
 
   ```
@@ -210,6 +226,17 @@ The web service token is never returned by any API, printed, echoed, logged or w
 config. Only token metadata (count, `timecreated`, `lastaccess`) is observable. Moodle core itself
 stores `external_tokens.token` in plain text; that is outside this plugin's control.
 
+Upgrading to 0.4.0 does not adopt tokens issued by earlier versions (they may have been issued
+manually). On such an install the first disconnect deletes nothing and reports the leftover tokens;
+the next connect issues a new tracked token that the plugin uses, while the old token remains for
+an administrator to revoke manually. Re-register with the hub after reconnecting if the hub needs
+the new token.
+
+`--iprestriction` accepts a comma-separated list of IPv4/IPv6 addresses or strict CIDR networks.
+Values are trimmed, canonicalised and deduplicated before being stored (maximum 255 characters);
+invalid values, host bits in a CIDR, zone ids and hostnames exit with code 2. The value requires
+`--connect`.
+
 ## Privacy
 
 The plugin itself stores no personal data in Moodle and has no database tables or user preferences.
@@ -224,6 +251,18 @@ Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS 
 then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.4.0 (2026103104)
+
+* New `local_ubionai_get_course_assignments` read function, plus `moodle/course:view` and
+  `mod/assign:view` for the service role. It lists assignments for courses the service user is not
+  enrolled in, unlike the enrolment-based `mod_assign_get_assignments`.
+* `--iprestriction` and the hub `egress_ip` are validated and normalised (strict IPv4/IPv6 and
+  CIDR list, at most 255 characters). Invalid hub values are rejected before any config is written;
+  invalid CLI values exit with code 2.
+* Issued token row ids are tracked in the `issued_token_ids` config so disconnect revokes only the
+  tokens this plugin issued. Untracked tokens are left in place and reported on the status page,
+  in the CLI and in the disconnect event. The upgrade does not adopt existing tokens.
 
 ### 0.3.0 (2026103103)
 
