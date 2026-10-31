@@ -25,11 +25,13 @@
 use core\output\notification;
 use local_ubionai\event\site_connected;
 use local_ubionai\event\site_disconnected;
+use local_ubionai\form\connect_form;
 use local_ubionai\local\hub_client;
 use local_ubionai\local\provisioner;
 
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
+require_once($CFG->libdir . '/formslib.php');
 
 admin_externalpage_setup('local_ubionai_connection');
 require_capability('local/ubionai:manageconnection', context_system::instance());
@@ -43,24 +45,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
     if ($action === 'connect') {
         $result = provisioner::provision();
         $hubconfigured = hub_client::is_configured();
+        $regcode = trim(optional_param('regcode', '', PARAM_RAW_TRIMMED));
+        $registration = null;
         $message = get_string('connect_success', 'local_ubionai');
         $type = notification::NOTIFY_SUCCESS;
 
-        if ($hubconfigured) {
-            $registration = hub_client::register($CFG->wwwroot, '');
-            if ($registration['status'] === 'not_implemented') {
-                $message = get_string('connect_hub_notimplemented', 'local_ubionai');
+        if ($hubconfigured && $regcode !== '') {
+            $registration = hub_client::register($regcode);
+            $message = get_string('hub_status_' . $registration['status'], 'local_ubionai');
+            $type = $registration['ok'] ? notification::NOTIFY_SUCCESS : notification::NOTIFY_WARNING;
+
+            $egressip = (string) get_config('local_ubionai', 'hub_egress_ip');
+            if ($registration['ok'] && $egressip !== '') {
+                \core\notification::add(get_string('hub_egress_hint', 'local_ubionai', $egressip),
+                    \core\notification::INFO);
+            }
+        } else if ($hubconfigured) {
+            if (!hub_client::is_registered()) {
+                $message = get_string('connect_hub_needcode', 'local_ubionai');
                 $type = notification::NOTIFY_WARNING;
             }
         } else {
             $message = get_string('connect_success_nohub', 'local_ubionai');
             $type = notification::NOTIFY_INFO;
         }
+        unset($regcode);
 
         $event = site_connected::create_from_service((int) $result['serviceid'], [
             'hubconfigured' => $hubconfigured,
             'tokencreated' => (bool) $result['token_created'],
             'functions_total' => (int) $result['functions_total'],
+            'hubregistered' => (bool) ($registration['ok'] ?? false),
+            'hubstatus' => (string) ($registration['status'] ?? ''),
         ]);
         $event->trigger();
 
@@ -71,12 +87,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         $deleted = provisioner::disconnect();
         unset_config('connected_at', 'local_ubionai');
         unset_config('hub_siteid', 'local_ubionai');
+        unset_config('hub_mcp_endpoint', 'local_ubionai');
+        unset_config('hub_egress_ip', 'local_ubionai');
+        unset_config('hub_registered_at', 'local_ubionai');
+        unset_config('hub_mcp_bearer', 'local_ubionai');
 
         $status = provisioner::status();
         $event = site_disconnected::create_from_service((int) ($status['serviceid'] ?? 0), [
             'tokensdeleted' => (int) $deleted,
         ]);
         $event->trigger();
+
+        if (hub_client::is_configured()) {
+            \core\notification::add(get_string('disconnect_hub_note', 'local_ubionai'),
+                \core\notification::INFO);
+        }
 
         redirect($pageurl, get_string('disconnect_success', 'local_ubionai', $deleted), null,
             notification::NOTIFY_SUCCESS);
@@ -134,6 +159,16 @@ $table->data = [
     [get_string('hub_configured', 'local_ubionai'),
         $status['hub_configured'] ? get_string('yes') : get_string('no')],
 ];
+
+if ($status['hub_registered']) {
+    $table->data[] = [get_string('hub_siteid', 'local_ubionai'), $status['hub_siteid']];
+    $table->data[] = [get_string('hub_registered_at', 'local_ubionai'),
+        $status['hub_registered_at'] !== null ? userdate($status['hub_registered_at']) : '-'];
+    $table->data[] = [get_string('hub_mcp_endpoint', 'local_ubionai'), $status['hub_mcp_endpoint']];
+    $table->data[] = [get_string('hub_egress_ip', 'local_ubionai'),
+        ($status['hub_egress_ip'] ?? '') !== '' ? $status['hub_egress_ip'] : '-'];
+}
+
 echo html_writer::table($table);
 
 $connectbutton = new single_button(
@@ -149,7 +184,12 @@ $disconnectbutton = new single_button(
 $disconnectbutton->add_confirm_action(get_string('disconnectconfirm', 'local_ubionai'));
 
 echo html_writer::start_div('local_ubionai_actions');
-echo $OUTPUT->render($connectbutton);
+if ($status['hub_configured'] && !$status['hub_registered']) {
+    $form = new connect_form($pageurl);
+    $form->display();
+} else {
+    echo $OUTPUT->render($connectbutton);
+}
 echo $OUTPUT->render($disconnectbutton);
 echo html_writer::end_div();
 
