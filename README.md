@@ -174,24 +174,41 @@ The plugin can provision its own Moodle web service connection.
 * **Settings** — Site administration > Plugins > Local plugins > UBION AI connection. The optional
   `Hub URL` must start with `https://`; leave it empty to provision the web service locally without
   registering with a hub.
+* **Registration** — the hub administrator issues a one-time registration code for this site
+  (`moodle-hub-admin issue-code --site-id X --moodle-url <wwwroot> --out FILE`). With a hub URL
+  configured and the site not yet registered, the status page replaces *Connect* with a form
+  containing a registration code field. Submitting the code provisions the local service and calls the hub
+  `POST /register` endpoint. The code is used once and is never stored, logged, echoed or placed in
+  a URL. On success the page shows the hub site ID, MCP endpoint, registration time and hub egress
+  IP. The MCP bearer returned by the hub is stored encrypted and is not displayed.
 * **Status page** — `/local/ubionai/connect.php` shows the connection state and has *Connect* and
   *Disconnect* buttons. *Connect* enables web services and REST, creates the `svc_ubionai` service
   user, the `ubionai_service` role, the restricted `ubionai` external service with its functions,
   authorises the user and issues one permanent token. *Disconnect* deletes the token(s) but keeps the
-  user, role and service so reconnecting is cheap and idempotent.
+  user, role and service so reconnecting is cheap and idempotent; it also clears the stored hub
+  registration data. Disconnect does **not** remove the tenant from the hub, so the hub
+  administrator must delete it before registering the same site again (otherwise the hub returns
+  `already_registered` / HTTP 409).
 * **CLI** — from the Moodle dirroot:
 
   ```
   php local/ubionai/cli/connection.php --status
   php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10]
+  php local/ubionai/cli/connection.php --connect --regcode-file=/path/to/code
+  php local/ubionai/cli/connection.php --connect --regcode-file=-
+  php local/ubionai/cli/connection.php --connect --regcode=VALUE
   php local/ubionai/cli/connection.php --disconnect
   ```
 
+  `--regcode-file=PATH` reads the first line of a regular file (at most 1 KiB) and warns when the
+  file is group- or world-readable. `--regcode-file=-` reads the same from stdin. `--regcode=VALUE`
+  is accepted but visible in the process list and shell history. Use only one of the two options,
+  and only with `--connect`. Registration failure after successful provisioning exits with code 3;
+  the registration code itself is never printed.
+
 The web service token is never returned by any API, printed, echoed, logged or written to plugin
 config. Only token metadata (count, `timecreated`, `lastaccess`) is observable. Moodle core itself
-stores `external_tokens.token` in plain text; that is outside this plugin's control. Hub
-registration is a stub in this iteration: with a hub URL configured, *Connect* completes the local
-setup and reports that hub registration is not available yet.
+stores `external_tokens.token` in plain text; that is outside this plugin's control.
 
 ## Privacy
 
@@ -207,6 +224,16 @@ Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS 
 then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.3.0 (2026103103)
+
+* Hub registration against `POST /register` with a one-time registration code, from the connection
+  page or the CLI (`--regcode-file`, `--regcode-file=-`, `--regcode`).
+* Hub URLs are restricted to https (no credentials, query or fragment); registration responses are
+  validated before any config is written.
+* On success the hub site ID, MCP endpoint, egress IP and registration time are stored; the MCP
+  bearer is stored encrypted and never displayed. Disconnect clears the hub registration data.
+* The registration code is never stored, logged or printed.
 
 ### 0.2.0 (2026103101)
 

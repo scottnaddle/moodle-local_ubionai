@@ -159,6 +159,40 @@ class provisioner {
     }
 
     /**
+     * Run a callback with the provisioned web service token string.
+     *
+     * The token string exists only inside the closure call; it is never returned, logged or
+     * stored by this method. Precondition: provision() has run.
+     *
+     * @param callable(string):mixed $fn callback receiving the token string
+     * @return mixed the closure's return value
+     * @throws \coding_exception when no token row exists
+     */
+    public static function with_token(callable $fn): mixed {
+        global $DB;
+
+        $service = self::service();
+        $user = self::service_user();
+        if (!$service || !$user) {
+            throw new \coding_exception('No external token is provisioned.');
+        }
+
+        $rows = $DB->get_records('external_tokens', [
+            'externalserviceid' => (int) $service->id,
+            'userid' => (int) $user->id,
+        ], 'id DESC', 'id, token', 0, 1);
+        $row = reset($rows);
+        if (!$row) {
+            throw new \coding_exception('No external token is provisioned.');
+        }
+
+        $result = $fn((string) $row->token);
+        unset($row);
+
+        return $result;
+    }
+
+    /**
      * Read-only connection status. Never contains the token string.
      *
      * @return array
@@ -181,6 +215,8 @@ class provisioner {
         }
 
         $connectedat = get_config('local_ubionai', 'connected_at');
+        $registeredat = get_config('local_ubionai', 'hub_registered_at');
+        $hubregistered = hub_client::is_registered();
 
         return [
             'webservices_enabled' => !empty(get_config('core', 'enablewebservices')),
@@ -201,6 +237,13 @@ class provisioner {
             'token_lastaccess' => $lastaccess,
             'connected_at' => $connectedat === false ? null : (int) $connectedat,
             'hub_configured' => hub_client::is_configured(),
+            'hub_registered' => $hubregistered,
+            'hub_siteid' => $hubregistered ? (string) get_config('local_ubionai', 'hub_siteid') : null,
+            'hub_registered_at' => ($hubregistered && $registeredat !== false) ? (int) $registeredat : null,
+            'hub_mcp_endpoint' => $hubregistered
+                ? (string) get_config('local_ubionai', 'hub_mcp_endpoint') : null,
+            'hub_egress_ip' => $hubregistered
+                ? (string) get_config('local_ubionai', 'hub_egress_ip') : null,
         ];
     }
 

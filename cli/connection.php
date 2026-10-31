@@ -36,14 +36,63 @@ require_once($CFG->libdir . '/clilib.php');
     'connect' => false,
     'disconnect' => false,
     'iprestriction' => '',
+    'regcode' => '',
+    'regcode-file' => '',
 ], ['h' => 'help']);
 
 $actioncount = (int) !empty($options['status']) + (int) !empty($options['connect'])
     + (int) !empty($options['disconnect']);
-if (!empty($options['help']) || $actioncount !== 1 || !empty($unrecognised)) {
+if (!empty($options['help'])) {
     echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
-    exit(!empty($options['help']) ? 0 : 2);
+    exit(0);
 }
+if ($actioncount !== 1 || !empty($unrecognised)) {
+    echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+    exit(2);
+}
+
+$regcode = trim((string) $options['regcode']);
+$regcodefile = (string) $options['regcode-file'];
+if ($regcode !== '' && $regcodefile !== '') {
+    echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+    exit(2);
+}
+if (($regcode !== '' || $regcodefile !== '') && empty($options['connect'])) {
+    echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+    exit(2);
+}
+
+$code = '';
+$codesupplied = false;
+if ($regcode !== '') {
+    $code = $regcode;
+    $codesupplied = true;
+    cli_writeln(get_string('cli_regcode_argv_warning', 'local_ubionai'));
+} else if ($regcodefile !== '') {
+    $codesupplied = true;
+    $raw = false;
+    if ($regcodefile === '-') {
+        $raw = stream_get_contents(STDIN, 1024);
+    } else {
+        $stat = @stat($regcodefile);
+        if ($stat === false || (($stat['mode'] & 0170000) !== 0100000)
+                || !is_readable($regcodefile)) {
+            echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+            exit(2);
+        }
+        if (($stat['mode'] & 0077) !== 0) {
+            cli_writeln(get_string('cli_regcode_perms_warning', 'local_ubionai'));
+        }
+        $raw = @file_get_contents($regcodefile, false, null, 0, 1024);
+    }
+    if ($raw === false) {
+        echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+        exit(2);
+    }
+    $firstline = strtok($raw, "\r\n");
+    $code = trim($firstline === false ? '' : $firstline);
+}
+unset($raw, $firstline, $regcode, $options['regcode']);
 
 \core\session\manager::set_user(get_admin());
 
@@ -56,7 +105,7 @@ try {
             } else if ($value === null) {
                 $value = '-';
             } else if ($key === 'token_timecreated' || $key === 'token_lastaccess'
-                    || $key === 'connected_at') {
+                    || $key === 'connected_at' || $key === 'hub_registered_at') {
                 $value = userdate((int) $value);
             }
             cli_writeln($key . ': ' . $value);
@@ -74,6 +123,18 @@ try {
         cli_writeln(hub_client::is_configured()
             ? get_string('hub_configured', 'local_ubionai')
             : get_string('hub_notconfigured', 'local_ubionai'));
+
+        if ($codesupplied) {
+            $registration = hub_client::register($code);
+            unset($code);
+            cli_writeln('hub_status: ' . $registration['status']);
+            if ($registration['siteid'] !== null) {
+                cli_writeln('hub_siteid: ' . $registration['siteid']);
+            }
+            if ($registration['status'] !== 'registered') {
+                exit(3);
+            }
+        }
     } else {
         $deleted = provisioner::disconnect();
         cli_writeln('tokensdeleted: ' . $deleted);

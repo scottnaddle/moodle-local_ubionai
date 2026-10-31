@@ -63,14 +63,31 @@ $string['status_tokenlastaccess'] = 'Token last used';
 $string['status_never'] = 'Never';
 $string['hub_configured'] = 'Hub URL configured';
 $string['hub_notconfigured'] = 'No hub URL configured';
-$string['token_warning_unused'] = 'A token exists but no hub is registered yet; the token is an active credential. Disconnect to remove it until the hub iteration ships.';
+$string['token_warning_unused'] = 'A token exists but no hub is registered yet; the token is an active credential. Disconnect to remove it, or register the site with a hub.';
 $string['connect'] = 'Connect';
 $string['connect_warning'] = 'Connecting creates a service user with a manager-archetype role and issues a permanent web service token. The token has no IP restriction unless one was set via the CLI.';
+$string['regcode'] = 'Registration code';
+$string['regcode_help'] = 'The one-time registration code issued by the hub administrator. The code is used once during registration and is never stored or logged. Leave empty to provision the local web service without registering with the hub.';
 $string['disconnect'] = 'Disconnect';
 $string['disconnectconfirm'] = 'This deletes the web service token for the UBION AI service user. The user, role and service are kept. Continue?';
 $string['connect_success'] = 'Connection provisioned successfully. Web service token issued for the UBION AI service user.';
 $string['connect_success_nohub'] = 'Provisioned locally; no hub URL is configured, so the site was not registered with a hub.';
-$string['connect_hub_notimplemented'] = 'Hub registration is not available yet; the local web service setup is complete.';
+$string['connect_hub_needcode'] = 'The hub is configured but the site is not registered yet. Enter the one-time registration code from the hub administrator and connect again.';
+$string['hub_status_registered'] = 'The site was registered with the hub.';
+$string['hub_status_invalid_hub_url'] = 'The hub URL is not configured or is invalid. It must be an https URL without credentials, a query or a fragment.';
+$string['hub_status_invalid_code'] = 'The registration code format is invalid.';
+$string['hub_status_code_rejected'] = 'The hub rejected the registration code. It may be invalid, expired, already used, or bound to a different site URL.';
+$string['hub_status_already_registered'] = 'The hub already has a tenant for this site. Ask the hub administrator to remove it before registering again.';
+$string['hub_status_registration_failed'] = 'The hub could not verify this site with the web service token. Registration failed.';
+$string['hub_status_protocol_error'] = 'The hub rejected the registration request format.';
+$string['hub_status_hub_unreachable'] = 'The hub could not be reached.';
+$string['hub_status_bad_response'] = 'The hub returned an unexpected response.';
+$string['hub_siteid'] = 'Hub site ID';
+$string['hub_mcp_endpoint'] = 'MCP endpoint';
+$string['hub_egress_ip'] = 'Hub egress IP';
+$string['hub_registered_at'] = 'Registered with hub';
+$string['hub_egress_hint'] = 'If the hub requires IP restriction, allow {$a} (the hub egress IP) in --iprestriction.';
+$string['disconnect_hub_note'] = 'The hub tenant was not removed. Ask the hub administrator to delete it before registering this site again, otherwise registration returns "already registered".';
 $string['disconnect_success'] = 'Connection removed. {$a} token(s) deleted.';
 
 // Events.
@@ -80,7 +97,14 @@ $string['event_site_disconnected'] = 'UBION AI site disconnected';
 $string['event_site_disconnected_desc'] = 'The UBION AI web service token was deleted.';
 
 // CLI.
+$string['cli_regcode_argv_warning'] = 'Warning: --regcode is visible in the process list and shell history. Prefer --regcode-file or --regcode-file=-.';
+$string['cli_regcode_perms_warning'] = 'Warning: the registration code file is group- or world-readable. Restrict it to the Moodle process user (for example chmod 600).';
 $string['cli_usage'] = 'Usage:
     php local/ubionai/cli/connection.php --status
-    php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10]
-    php local/ubionai/cli/connection.php --disconnect';
+    php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10] [--regcode-file=PATH]
+    php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10] --regcode-file=-
+    php local/ubionai/cli/connection.php --connect [--regcode=VALUE]
+    php local/ubionai/cli/connection.php --disconnect
+
+--regcode-file=PATH reads the first line of a regular file (at most 1 KiB); use - to read stdin.
+--regcode=VALUE is supported but visible in the process list and shell history.';
