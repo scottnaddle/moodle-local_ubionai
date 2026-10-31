@@ -30,7 +30,7 @@ $functions = [
         'description' => 'Create an assign, quiz, forum, page, resource, url, workshop, wiki, glossary, feedback, '
             . 'h5pactivity or openmaic activity in a course section.',
         'type' => 'write',
-        'capabilities' => 'moodle/course:manageactivities, mod/assign:addinstance, mod/quiz:addinstance, '
+        'capabilities' => 'moodle/course:manageactivities, mod/*:addinstance'
             . 'mod/forum:addinstance, mod/page:addinstance, mod/resource:addinstance, mod/url:addinstance, '
             . 'mod/workshop:addinstance, mod/wiki:addinstance, mod/glossary:addinstance, mod/feedback:addinstance, '
             . 'mod/h5pactivity:addinstance, mod/openmaic:addinstance',
