@@ -198,8 +198,11 @@ The plugin can provision its own Moodle web service connection.
 * **Status page** — `/local/ubionai/connect.php` shows the connection state and has *Connect* and
   *Disconnect* buttons. *Connect* enables web services and REST, creates the `svc_ubionai` service
   user, the `ubionai_service` role, the restricted `ubionai` external service with its functions,
-  authorises the user and issues one permanent token. Token row ids issued by the plugin are
-  tracked in the `issued_token_ids` config (ids only; the token string is never stored). *Disconnect*
+  authorises the user and ensures exactly one usable permanent token. It reuses a valid tracked
+  token, adopts an untracked valid token named `ubionai-mcp`, and only mints a new token when
+  neither exists; the result reports `token_action: reused|adopted|created`. Token row ids managed
+  by the plugin are tracked in the `issued_token_ids` config (ids only; the token string is never
+  stored). *Disconnect*
   deletes only those tracked tokens and leaves any other token of the service user in place,
   warning about the count on the status page and in the CLI. It keeps the user, role and service so
   reconnecting is cheap and idempotent; it also clears the stored hub registration data. Disconnect
@@ -226,11 +229,21 @@ The web service token is never returned by any API, printed, echoed, logged or w
 config. Only token metadata (count, `timecreated`, `lastaccess`) is observable. Moodle core itself
 stores `external_tokens.token` in plain text; that is outside this plugin's control.
 
-Upgrading to 0.4.0 does not adopt tokens issued by earlier versions (they may have been issued
-manually). On such an install the first disconnect deletes nothing and reports the leftover tokens;
-the next connect issues a new tracked token that the plugin uses, while the old token remains for
-an administrator to revoke manually. Re-register with the hub after reconnecting if the hub needs
-the new token.
+### Upgrading to 0.5.0
+
+After upgrading, click *Connect* (or run `php local/ubionai/cli/connection.php --connect`) once. No
+new token is created: an existing valid token is reused, or an existing valid token named
+`ubionai-mcp` for service `ubionai` and user `svc_ubionai` is adopted (reported as
+`token_action: adopted`). The new `local_ubionai_list_course_assignments` function is attached to
+the service during the same Connect run, because Moodle registers new external functions after the
+upgrade hook has run. Re-register with the hub after reconnecting if the hub needs the new token.
+
+Adoption rules: a token is adopted only when it is PERMANENT, unexpired, belongs to service
+`ubionai` and user `svc_ubionai`, and is named exactly `ubionai-mcp`. Tokens with any other name or
+on another service are never reused, adopted or deleted; they are counted as untracked. Adopted
+tokens are tracked, so *Disconnect* revokes them. Disconnect semantics are otherwise unchanged.
+Residual risk: if an administrator manually created a token on service `ubionai` for user
+`svc_ubionai` named exactly `ubionai-mcp`, Connect will adopt it and Disconnect will revoke it.
 
 `--iprestriction` accepts a comma-separated list of IPv4/IPv6 addresses or strict CIDR networks.
 Values are trimmed, canonicalised and deduplicated before being stored (maximum 255 characters);
@@ -251,6 +264,25 @@ Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS 
 then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.5.0 (2026103105)
+
+* Connect is idempotent: it reuses a valid tracked token, adopts a valid untracked token named
+  `ubionai-mcp`, and otherwise mints one. The result and the `site_connected` event report
+  `token_action: reused|adopted|created`; `token_created` remains for backward compatibility.
+  Tracked tokens are filtered by service, user, type and expiry, so an expired or foreign tracked
+  row is never reused. Disconnect semantics are unchanged, including revocation of adopted tokens.
+* New `local_ubionai_list_course_assignments` read function: a paged (`offset`, `limit` 1..100),
+  `ORDER BY c.id` list of non-site courses that contain assignments, with per-course warnings and
+  no enrolment requirement.
+* Hub: `list_assignments` pages through all courses with assignments when `course_ids` is omitted,
+  tags plugin-sourced courses with `source: local_ubionai`, returns a `paging` block and falls back
+  sequentially for plugins without the new function.
+* Hub pseudonymisation: title fields (`name`, `sectionname`, `modname`, `categoryname`,
+  `coursename`, `groupname`, `displayname`) skip heuristic Korean-name detection while seeded known
+  names are still masked; `idnumber` is no longer a user marker, so course names in `list_courses`
+  are readable while user records (which carry `firstname`/`lastname`/`email`/`username`/`userid`)
+  stay masked.
 
 ### 0.4.0 (2026103104)
 

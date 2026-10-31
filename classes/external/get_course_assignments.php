@@ -60,6 +60,21 @@ class get_course_assignments extends external_api {
         require_capability('moodle/course:view', $context);
         require_capability('mod/assign:view', $context);
 
+        return [
+            'courses' => [self::build_course($course)],
+            'warnings' => [],
+        ];
+    }
+
+    /**
+     * Build the assignments entry for one course (modinfo-visible assigns only).
+     *
+     * @param \stdClass $course full course record
+     * @return array course entry: id, fullname, shortname, assignments
+     */
+    public static function build_course(\stdClass $course): array {
+        global $DB;
+
         $modinfo = get_fast_modinfo($course);
         $instanceids = [];
         $cms = [];
@@ -127,16 +142,49 @@ class get_course_assignments extends external_api {
         }
 
         return [
-            'courses' => [
-                [
-                    'id' => (int) $course->id,
-                    'fullname' => $course->fullname,
-                    'shortname' => $course->shortname,
-                    'assignments' => $assignments,
-                ],
-            ],
-            'warnings' => [],
+            'id' => (int) $course->id,
+            'fullname' => $course->fullname,
+            'shortname' => $course->shortname,
+            'assignments' => $assignments,
         ];
+    }
+
+    /**
+     * External structure of one course entry (shared with list_course_assignments).
+     *
+     * @return external_single_structure
+     */
+    public static function course_structure(): external_single_structure {
+        return new external_single_structure([
+            'id' => new external_value(PARAM_INT, 'Course id'),
+            'fullname' => new external_value(PARAM_TEXT, 'Course full name'),
+            'shortname' => new external_value(PARAM_TEXT, 'Course short name'),
+            'assignments' => new external_multiple_structure(
+                new external_single_structure([
+                    'id' => new external_value(PARAM_INT, 'Assignment instance id'),
+                    'cmid' => new external_value(PARAM_INT, 'Course module id'),
+                    'course' => new external_value(PARAM_INT, 'Course id'),
+                    'name' => new external_value(PARAM_TEXT, 'Assignment name'),
+                    'visible' => new external_value(PARAM_BOOL, 'Module visible'),
+                    'section' => new external_value(PARAM_INT, 'Section number'),
+                    'duedate' => new external_value(PARAM_INT, 'Due date'),
+                    'allowsubmissionsfromdate' => new external_value(PARAM_INT, 'Submissions open from'),
+                    'cutoffdate' => new external_value(PARAM_INT, 'Cut-off date'),
+                    'gradingduedate' => new external_value(PARAM_INT, 'Grading due date'),
+                    'grade' => new external_value(PARAM_RAW, 'Raw grade setting'),
+                    'gradetype' => new external_value(PARAM_ALPHA, 'point|scale|none'),
+                    'grademax' => new external_value(PARAM_FLOAT, 'Grade max'),
+                    'scaleid' => new external_value(PARAM_INT, 'Scale id', VALUE_OPTIONAL),
+                    'gradepass' => new external_value(PARAM_FLOAT, 'Grade to pass'),
+                    'markingworkflow' => new external_value(PARAM_BOOL, 'Marking workflow enabled'),
+                    'markingallocation' => new external_value(PARAM_BOOL, 'Marking allocation enabled'),
+                    'teamsubmission' => new external_value(PARAM_BOOL, 'Team submission enabled'),
+                    'blindmarking' => new external_value(PARAM_BOOL, 'Blind marking enabled'),
+                    'attemptreopenmethod' => new external_value(PARAM_ALPHA, 'Attempt reopen method'),
+                    'maxattempts' => new external_value(PARAM_INT, 'Max attempts'),
+                ])
+            ),
+        ]);
     }
 
     /**
@@ -146,38 +194,7 @@ class get_course_assignments extends external_api {
      */
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'courses' => new external_multiple_structure(
-                new external_single_structure([
-                    'id' => new external_value(PARAM_INT, 'Course id'),
-                    'fullname' => new external_value(PARAM_TEXT, 'Course full name'),
-                    'shortname' => new external_value(PARAM_TEXT, 'Course short name'),
-                    'assignments' => new external_multiple_structure(
-                        new external_single_structure([
-                            'id' => new external_value(PARAM_INT, 'Assignment instance id'),
-                            'cmid' => new external_value(PARAM_INT, 'Course module id'),
-                            'course' => new external_value(PARAM_INT, 'Course id'),
-                            'name' => new external_value(PARAM_TEXT, 'Assignment name'),
-                            'visible' => new external_value(PARAM_BOOL, 'Module visible'),
-                            'section' => new external_value(PARAM_INT, 'Section number'),
-                            'duedate' => new external_value(PARAM_INT, 'Due date'),
-                            'allowsubmissionsfromdate' => new external_value(PARAM_INT, 'Submissions open from'),
-                            'cutoffdate' => new external_value(PARAM_INT, 'Cut-off date'),
-                            'gradingduedate' => new external_value(PARAM_INT, 'Grading due date'),
-                            'grade' => new external_value(PARAM_RAW, 'Raw grade setting'),
-                            'gradetype' => new external_value(PARAM_ALPHA, 'point|scale|none'),
-                            'grademax' => new external_value(PARAM_FLOAT, 'Grade max'),
-                            'scaleid' => new external_value(PARAM_INT, 'Scale id', VALUE_OPTIONAL),
-                            'gradepass' => new external_value(PARAM_FLOAT, 'Grade to pass'),
-                            'markingworkflow' => new external_value(PARAM_BOOL, 'Marking workflow enabled'),
-                            'markingallocation' => new external_value(PARAM_BOOL, 'Marking allocation enabled'),
-                            'teamsubmission' => new external_value(PARAM_BOOL, 'Team submission enabled'),
-                            'blindmarking' => new external_value(PARAM_BOOL, 'Blind marking enabled'),
-                            'attemptreopenmethod' => new external_value(PARAM_ALPHA, 'Attempt reopen method'),
-                            'maxattempts' => new external_value(PARAM_INT, 'Max attempts'),
-                        ])
-                    ),
-                ])
-            ),
+            'courses' => new external_multiple_structure(self::course_structure()),
             'warnings' => new external_multiple_structure(
                 new external_single_structure([]), VALUE_OPTIONAL
             ),

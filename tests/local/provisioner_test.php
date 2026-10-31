@@ -137,9 +137,9 @@ final class provisioner_test extends \advanced_testcase {
     }
 
     /**
-     * A legacy install deletes nothing and leaves its existing token in place.
+     * A legacy token named ubionai-mcp is adopted on reconnect and revoked by disconnect.
      */
-    public function test_disconnect_legacy_install(): void {
+    public function test_disconnect_legacy_named_token_is_adopted_on_reconnect(): void {
         global $DB;
 
         provisioner::provision();
@@ -149,25 +149,261 @@ final class provisioner_test extends \advanced_testcase {
 
         set_config('issued_token_ids', '', 'local_ubionai');
 
-        $result = provisioner::disconnect();
-
-        $this->assertSame(0, $result['deleted']);
-        $this->assertSame(1, $result['untracked']);
-        $this->assertTrue($DB->record_exists('external_tokens', ['id' => $legacyid]));
-
         $reprovision = provisioner::provision();
-        $this->assertTrue($reprovision['token_created']);
-        $newids = self::tracked_ids();
-        $this->assertCount(1, $newids);
-        $this->assertNotSame($legacyid, $newids[0]);
+        $this->assertSame('adopted', $reprovision['token_action']);
+        $this->assertFalse($reprovision['token_created']);
 
-        $expected = $DB->get_field('external_tokens', 'token', ['id' => $newids[0]], MUST_EXIST);
+        $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
+        $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
+        $this->assertSame(1, $DB->count_records('external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+        $this->assertSame([$legacyid], self::tracked_ids());
+
+        $expected = $DB->get_field('external_tokens', 'token', ['id' => $legacyid], MUST_EXIST);
         $called = false;
         provisioner::with_token(function (string $token) use (&$called, $expected): void {
             $called = true;
             $this->assertSame($expected, $token);
         });
         $this->assertTrue($called);
+
+        $result = provisioner::disconnect();
+        $this->assertSame(1, $result['deleted']);
+        $this->assertSame(0, $result['untracked']);
+        $this->assertFalse($DB->record_exists('external_tokens', ['id' => $legacyid]));
+    }
+
+    /**
+     * A legacy token with another name is not adopted; a new one is minted and tracked.
+     */
+    public function test_disconnect_legacy_other_named_token_is_not_adopted(): void {
+        global $DB;
+
+        provisioner::provision();
+        $ids = self::tracked_ids();
+        $this->assertCount(1, $ids);
+        $legacyid = $ids[0];
+        $DB->set_field('external_tokens', 'name', 'manual-admin', ['id' => $legacyid]);
+
+        set_config('issued_token_ids', '', 'local_ubionai');
+
+        $reprovision = provisioner::provision();
+        $this->assertSame('created', $reprovision['token_action']);
+        $this->assertTrue($reprovision['token_created']);
+
+        $newids = self::tracked_ids();
+        $this->assertCount(1, $newids);
+        $this->assertNotSame($legacyid, $newids[0]);
+        $this->assertTrue($DB->record_exists('external_tokens', ['id' => $legacyid]));
+
+        $result = provisioner::disconnect();
+        $this->assertSame(1, $result['deleted']);
+        $this->assertSame(1, $result['untracked']);
+        $this->assertFalse($DB->record_exists('external_tokens', ['id' => $newids[0]]));
+        $this->assertTrue($DB->record_exists('external_tokens', ['id' => $legacyid]));
+    }
+
+    /**
+     * Connecting twice reuses the tracked valid token.
+     */
+    public function test_connect_twice_reuses_token(): void {
+        global $DB;
+
+        $first = provisioner::provision();
+        $firstids = self::tracked_ids();
+        $second = provisioner::provision();
+        $secondids = self::tracked_ids();
+
+        $this->assertSame('created', $first['token_action']);
+        $this->assertSame('reused', $second['token_action']);
+        $this->assertFalse($second['token_created']);
+        $this->assertSame($firstids, $secondids);
+
+        $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
+        $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
+        $this->assertSame(1, $DB->count_records('external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+    }
+
+    /**
+     * Connect after disconnect mints exactly one token; a further connect reuses it.
+     */
+    public function test_connect_after_disconnect_mints_one(): void {
+        global $DB;
+
+        provisioner::provision();
+        provisioner::disconnect();
+        $created = provisioner::provision();
+        $reused = provisioner::provision();
+
+        $this->assertSame('created', $created['token_action']);
+        $this->assertSame('reused', $reused['token_action']);
+        $this->assertCount(1, self::tracked_ids());
+
+        $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
+        $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
+        $this->assertSame(1, $DB->count_records('external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+    }
+
+    /**
+     * An untracked valid token named ubionai-mcp is adopted without creating a new row.
+     */
+    public function test_adopts_untracked_named_token(): void {
+        global $DB;
+
+        provisioner::provision();
+        $id = self::tracked_ids()[0];
+
+        set_config('issued_token_ids', '', 'local_ubionai');
+
+        $result = provisioner::provision();
+        $this->assertSame('adopted', $result['token_action']);
+        $this->assertFalse($result['token_created']);
+        $this->assertSame([$id], self::tracked_ids());
+
+        $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
+        $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
+        $this->assertSame(1, $DB->count_records('external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+
+        $disconnect = provisioner::disconnect();
+        $this->assertSame(1, $disconnect['deleted']);
+        $this->assertSame(0, $disconnect['untracked']);
+        $this->assertFalse($DB->record_exists('external_tokens', ['id' => $id]));
+    }
+
+    /**
+     * A valid token with another name is never adopted or deleted.
+     */
+    public function test_does_not_adopt_other_named_token(): void {
+        global $DB;
+
+        provisioner::provision();
+        $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
+        $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
+
+        $DB->delete_records('external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]);
+        set_config('issued_token_ids', '', 'local_ubionai');
+        $manualid = self::create_manual_token((int) $service->id, (int) $user->id, 'manual-admin');
+
+        $result = provisioner::provision();
+        $this->assertSame('created', $result['token_action']);
+
+        $newids = self::tracked_ids();
+        $this->assertCount(1, $newids);
+        $this->assertNotSame($manualid, $newids[0]);
+
+        $disconnect = provisioner::disconnect();
+        $this->assertSame(1, $disconnect['deleted']);
+        $this->assertSame(1, $disconnect['untracked']);
+        $this->assertFalse($DB->record_exists('external_tokens', ['id' => $newids[0]]));
+        $this->assertTrue($DB->record_exists('external_tokens', ['id' => $manualid]));
+    }
+
+    /**
+     * An expired tracked token is deleted and replaced by a new one.
+     */
+    public function test_expired_tracked_token_replaced(): void {
+        global $DB;
+
+        provisioner::provision();
+        $id = self::tracked_ids()[0];
+        $DB->set_field('external_tokens', 'validuntil', time() - 10, ['id' => $id]);
+
+        $result = provisioner::provision();
+        $this->assertSame('created', $result['token_action']);
+        $this->assertFalse($DB->record_exists('external_tokens', ['id' => $id]));
+
+        $newids = self::tracked_ids();
+        $this->assertCount(1, $newids);
+        $this->assertNotSame($id, $newids[0]);
+    }
+
+    /**
+     * An expired untracked token named ubionai-mcp is neither adopted nor deleted.
+     */
+    public function test_expired_named_untracked_not_adopted(): void {
+        global $DB;
+
+        provisioner::provision();
+        $id = self::tracked_ids()[0];
+        $DB->set_field('external_tokens', 'validuntil', time() - 10, ['id' => $id]);
+        set_config('issued_token_ids', '', 'local_ubionai');
+
+        $result = provisioner::provision();
+        $this->assertSame('created', $result['token_action']);
+        $this->assertTrue($DB->record_exists('external_tokens', ['id' => $id]));
+
+        $newids = self::tracked_ids();
+        $this->assertCount(1, $newids);
+        $this->assertNotSame($id, $newids[0]);
+    }
+
+    /**
+     * A tracked id that points at another service is untracked but not deleted.
+     */
+    public function test_tracked_id_on_other_service_untracked_not_deleted(): void {
+        global $DB;
+
+        provisioner::provision();
+        $id = self::tracked_ids()[0];
+        $otherid = $DB->insert_record('external_services', (object) [
+            'name' => 'Other service',
+            'shortname' => 'otherservice',
+            'enabled' => 1,
+            'restrictedusers' => 0,
+            'downloadfiles' => 0,
+            'uploadfiles' => 0,
+            'requiredcapability' => '',
+            'component' => null,
+            'timecreated' => time(),
+        ]);
+        $DB->set_field('external_tokens', 'externalserviceid', $otherid, ['id' => $id]);
+
+        $result = provisioner::provision();
+        $this->assertSame('created', $result['token_action']);
+        $this->assertTrue($DB->record_exists('external_tokens', ['id' => $id]));
+
+        $newids = self::tracked_ids();
+        $this->assertCount(1, $newids);
+        $this->assertNotSame($id, $newids[0]);
+
+        $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
+        $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
+        $this->assertSame(1, $DB->count_records('external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+    }
+
+    /**
+     * with_token throws when the tracked token is no longer valid.
+     */
+    public function test_with_token_ignores_invalid_tracked(): void {
+        global $DB;
+
+        provisioner::provision();
+        $id = self::tracked_ids()[0];
+        $DB->set_field('external_tokens', 'validuntil', time() - 10, ['id' => $id]);
+
+        $this->expectException(\coding_exception::class);
+        provisioner::with_token(static function (string $token): void {
+        });
+    }
+
+    /**
+     * status() reports whether the tracked token is valid.
+     */
+    public function test_status_reports_token_valid(): void {
+        global $DB;
+
+        provisioner::provision();
+        $this->assertTrue(provisioner::status()['token_valid']);
+
+        $id = self::tracked_ids()[0];
+        $DB->set_field('external_tokens', 'validuntil', time() - 10, ['id' => $id]);
+
+        $this->assertFalse(provisioner::status()['token_valid']);
     }
 
     /**
@@ -219,9 +455,11 @@ final class provisioner_test extends \advanced_testcase {
      *
      * @param int $serviceid external service id
      * @param int $userid service user id
+     * @param string $name token name
      * @return int created token row id
      */
-    private static function create_manual_token(int $serviceid, int $userid): int {
+    private static function create_manual_token(int $serviceid, int $userid,
+            string $name = 'manual-admin'): int {
         global $DB;
 
         $token = \core_external\util::generate_token(
@@ -231,7 +469,7 @@ final class provisioner_test extends \advanced_testcase {
             \context_system::instance(),
             0,
             '',
-            'manual'
+            $name
         );
         $id = (int) $DB->get_field('external_tokens', 'id', ['token' => $token]);
         unset($token);

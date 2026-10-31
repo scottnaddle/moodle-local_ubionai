@@ -47,7 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         $hubconfigured = hub_client::is_configured();
         $regcode = trim(optional_param('regcode', '', PARAM_RAW_TRIMMED));
         $registration = null;
+        $tokenaction = (string) $result['token_action'];
         $message = get_string('connect_success', 'local_ubionai');
+        if ($tokenaction === 'reused') {
+            $message = get_string('connect_success_reused', 'local_ubionai');
+        } else if ($tokenaction === 'adopted') {
+            $message = get_string('connect_success_adopted', 'local_ubionai');
+        }
         $type = notification::NOTIFY_SUCCESS;
 
         if ($hubconfigured && $regcode !== '') {
@@ -74,11 +80,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         $event = site_connected::create_from_service((int) $result['serviceid'], [
             'hubconfigured' => $hubconfigured,
             'tokencreated' => (bool) $result['token_created'],
+            'tokenaction' => (string) $result['token_action'],
             'functions_total' => (int) $result['functions_total'],
             'hubregistered' => (bool) ($registration['ok'] ?? false),
             'hubstatus' => (string) ($registration['status'] ?? ''),
         ]);
         $event->trigger();
+
+        if ($result['token_action'] === 'adopted') {
+            \core\notification::add(get_string('token_adopted', 'local_ubionai'), \core\notification::INFO);
+        }
 
         redirect($pageurl, $message, null, $type);
     }
@@ -121,7 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && optional_param('action', '', PARAM_
 }
 
 $status = provisioner::status();
-$connected = $status['token_count'] > 0 && $status['user_authorised'] && $status['serviceid'] !== null;
+$connected = $status['tokens_tracked'] > 0 && !empty($status['token_valid'])
+    && $status['user_authorised'] && $status['serviceid'] !== null;
 
 $PAGE->set_title(get_string('connection', 'local_ubionai'));
 $PAGE->set_heading(get_string('connection', 'local_ubionai'));
@@ -163,6 +175,8 @@ $table->data = [
     [get_string('status_authorised', 'local_ubionai'),
         $status['user_authorised'] ? get_string('yes') : get_string('no')],
     [get_string('status_tokens', 'local_ubionai'), $status['token_count']],
+    [get_string('status_tokenvalid', 'local_ubionai'),
+        $status['token_valid'] ? get_string('yes') : get_string('no')],
     [get_string('status_tokencreated', 'local_ubionai'),
         $status['token_timecreated'] !== null ? userdate($status['token_timecreated']) : get_string('status_never', 'local_ubionai')],
     [get_string('status_tokenlastaccess', 'local_ubionai'),

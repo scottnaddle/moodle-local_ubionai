@@ -65,5 +65,14 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026103104, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026103105) {
+        // 0.5.0: no data change. Connect is now idempotent and lazily adopts existing
+        // 'ubionai-mcp' tokens (token_action: reused|adopted|created); the new read
+        // function local_ubionai_list_course_assignments is attached to the service by
+        // re-running Connect, because core registers external_functions only after this
+        // upgrade hook runs (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026103105, 'local', 'ubionai');
+    }
+
     return true;
 }
