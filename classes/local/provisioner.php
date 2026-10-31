@@ -71,6 +71,8 @@ class provisioner {
         'moodle/badges:createbadge',
         'moodle/badges:configurecriteria',
         'moodle/badges:awardbadge',
+        'moodle/course:view',
+        'mod/assign:view',
     ];
 
     /** @var string[] Web service functions exposed to the MCP server. */
@@ -88,10 +90,11 @@ class provisioner {
         // Optional: mod_attendance. Skipped (and reported by name) when the plugin is absent.
         'mod_attendance_get_sessions', 'mod_attendance_get_session', 'mod_attendance_add_attendance',
         'mod_attendance_add_session', 'mod_attendance_update_user_status',
-        // Local plugin functions (9).
+        // Local plugin functions (10).
         'local_ubionai_create_module', 'local_ubionai_update_module', 'local_ubionai_add_quiz_questions',
         'local_ubionai_update_section', 'local_ubionai_add_sections', 'local_ubionai_set_section_availability',
         'local_ubionai_set_rubric', 'local_ubionai_set_grade_categories', 'local_ubionai_create_badge',
+        'local_ubionai_get_course_assignments',
     ];
 
     /**
@@ -103,6 +106,8 @@ class provisioner {
      */
     public static function provision(string $iprestriction = ''): array {
         global $CFG;
+
+        $iprestriction = ip_validator::normalise($iprestriction);
 
         set_config('enablewebservices', 1);
         $protocols = array_filter(explode(',', (string) get_config('core', 'webserviceprotocols')));
@@ -136,26 +141,44 @@ class provisioner {
     }
 
     /**
-     * Delete all external tokens for the service and service user.
+     * Delete the tokens this plugin issued for the service user.
      *
      * The user, role and service are kept so that reconnecting is cheap and idempotent.
+     * Tokens of the service user that this plugin did not issue are left in place.
      *
-     * @return int number of token rows deleted
+     * @return array{deleted: int, untracked: int} deleted = tracked rows removed,
+     *         untracked = other token rows of the service user (any service) left in place
      */
-    public static function disconnect(): int {
+    public static function disconnect(): array {
         global $DB;
 
         $service = self::service();
         $user = self::service_user();
-        if (!$service || !$user) {
-            return 0;
+        if (!$user) {
+            self::set_tracked_token_ids([]);
+            return ['deleted' => 0, 'untracked' => 0];
         }
 
-        $conditions = ['externalserviceid' => (int) $service->id, 'userid' => (int) $user->id];
-        $count = $DB->count_records('external_tokens', $conditions);
-        $DB->delete_records('external_tokens', $conditions);
+        $userid = (int) $user->id;
+        $total = (int) $DB->count_records('external_tokens', ['userid' => $userid]);
+        $tracked = self::tracked_token_ids();
+        if (!$service || !$tracked) {
+            self::set_tracked_token_ids([]);
+            return ['deleted' => 0, 'untracked' => $total];
+        }
 
-        return (int) $count;
+        [$insql, $params] = $DB->get_in_or_equal($tracked, SQL_PARAMS_NAMED, 'tokenid');
+        $params['serviceid'] = (int) $service->id;
+        $params['userid'] = $userid;
+        $select = "externalserviceid = :serviceid AND userid = :userid AND id {$insql}";
+
+        $deleted = (int) $DB->count_records_select('external_tokens', $select, $params);
+        if ($deleted > 0) {
+            $DB->delete_records_select('external_tokens', $select, $params);
+        }
+        self::set_tracked_token_ids([]);
+
+        return ['deleted' => $deleted, 'untracked' => max(0, $total - $deleted)];
     }
 
     /**
@@ -166,7 +189,7 @@ class provisioner {
      *
      * @param callable(string):mixed $fn callback receiving the token string
      * @return mixed the closure's return value
-     * @throws \coding_exception when no token row exists
+     * @throws \coding_exception when no tracked token row exists
      */
     public static function with_token(callable $fn): mixed {
         global $DB;
@@ -177,14 +200,12 @@ class provisioner {
             throw new \coding_exception('No external token is provisioned.');
         }
 
-        $rows = $DB->get_records('external_tokens', [
-            'externalserviceid' => (int) $service->id,
-            'userid' => (int) $user->id,
-        ], 'id DESC', 'id, token', 0, 1);
-        $row = reset($rows);
-        if (!$row) {
+        $ids = self::tracked_token_ids();
+        if (!$ids) {
             throw new \coding_exception('No external token is provisioned.');
         }
+
+        $row = $DB->get_record('external_tokens', ['id' => max($ids)], 'id, token', MUST_EXIST);
 
         $result = $fn((string) $row->token);
         unset($row);
@@ -204,6 +225,22 @@ class provisioner {
         $user = self::service_user();
         $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE]);
         $rows = self::token_rows();
+
+        $trackedids = self::tracked_token_ids();
+        $trackedcount = count($trackedids);
+        $untrackedcount = 0;
+        if ($user) {
+            $usertokens = (int) $DB->count_records('external_tokens', ['userid' => (int) $user->id]);
+            $ourtracked = 0;
+            if ($service && $trackedids) {
+                [$insql, $params] = $DB->get_in_or_equal($trackedids, SQL_PARAMS_NAMED, 'tokenid');
+                $params['serviceid'] = (int) $service->id;
+                $params['userid'] = (int) $user->id;
+                $ourtracked = (int) $DB->count_records_select('external_tokens',
+                    "externalserviceid = :serviceid AND userid = :userid AND id {$insql}", $params);
+            }
+            $untrackedcount = max(0, $usertokens - $ourtracked);
+        }
 
         $timecreated = null;
         $lastaccess = null;
@@ -233,6 +270,8 @@ class provisioner {
                     ['externalserviceid' => $service->id, 'userid' => $user->id])
                 : false,
             'token_count' => count($rows),
+            'tokens_tracked' => $trackedcount,
+            'tokens_untracked' => $untrackedcount,
             'token_timecreated' => $timecreated,
             'token_lastaccess' => $lastaccess,
             'connected_at' => $connectedat === false ? null : (int) $connectedat,
@@ -410,7 +449,6 @@ class provisioner {
 
         if ($iprestriction !== '') {
             $DB->set_field('external_services_users', 'iprestriction', $iprestriction, $conditions);
-            $DB->set_field('external_tokens', 'iprestriction', $iprestriction, $conditions);
         }
     }
 
@@ -427,20 +465,28 @@ class provisioner {
     private static function ensure_single_token(int $serviceid, int $userid, string $iprestriction): bool {
         global $DB;
 
-        $rows = self::token_rows();
-        if ($rows) {
-            $rows = array_values($rows);
-            $keep = array_shift($rows);
-            foreach ($rows as $row) {
-                $DB->delete_records('external_tokens', ['id' => $row->id]);
+        $kept = null;
+        foreach (self::tracked_token_ids() as $id) {
+            $row = $DB->get_record('external_tokens', ['id' => $id], 'id, iprestriction');
+            if (!$row) {
+                continue;
             }
+            if ($kept === null) {
+                $kept = $row;
+            } else {
+                $DB->delete_records('external_tokens', ['id' => $id]);
+            }
+        }
+
+        if ($kept !== null) {
+            self::set_tracked_token_ids([(int) $kept->id]);
             if ($iprestriction !== '') {
-                $DB->set_field('external_tokens', 'iprestriction', $iprestriction, ['id' => $keep->id]);
+                $DB->set_field('external_tokens', 'iprestriction', $iprestriction, ['id' => $kept->id]);
             }
             return false;
         }
 
-        \core_external\util::generate_token(
+        $token = \core_external\util::generate_token(
             EXTERNAL_TOKEN_PERMANENT,
             \core_external\util::get_service_by_id($serviceid),
             $userid,
@@ -449,8 +495,67 @@ class provisioner {
             $iprestriction,
             self::TOKEN_NAME
         );
+        $newid = (int) $DB->get_field('external_tokens', 'id', ['token' => $token]);
+        unset($token);
+        if ($newid <= 0) {
+            throw new \coding_exception('Unable to track the new external token.');
+        }
+
+        $tracked = self::tracked_token_ids();
+        $tracked[] = $newid;
+        self::set_tracked_token_ids($tracked);
 
         return true;
+    }
+
+    /**
+     * Get the tracked token row ids, dropping entries that no longer exist.
+     *
+     * @return int[]
+     */
+    private static function tracked_token_ids(): array {
+        global $DB;
+
+        $raw = (string) get_config('local_ubionai', 'issued_token_ids');
+        $ids = [];
+        foreach (explode(',', $raw) as $part) {
+            $part = trim($part);
+            if ($part === '' || !ctype_digit($part)) {
+                continue;
+            }
+            $id = (int) $part;
+            if ($id > 0 && !in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
+        $valid = [];
+        foreach ($ids as $id) {
+            if ($DB->record_exists('external_tokens', ['id' => $id])) {
+                $valid[] = $id;
+            }
+        }
+        if ($valid !== $ids) {
+            self::set_tracked_token_ids($valid);
+        }
+
+        return $valid;
+    }
+
+    /**
+     * Replace the tracked token row ids in plugin config.
+     *
+     * @param int[] $ids token row ids
+     */
+    private static function set_tracked_token_ids(array $ids): void {
+        $clean = [];
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0 && !in_array($id, $clean, true)) {
+                $clean[] = $id;
+            }
+        }
+        set_config('issued_token_ids', implode(',', $clean), 'local_ubionai');
     }
 
     /**

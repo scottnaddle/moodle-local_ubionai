@@ -58,6 +58,7 @@ $string['status_service'] = 'External service';
 $string['status_functions'] = 'Functions enabled';
 $string['status_authorised'] = 'User authorised for service';
 $string['status_tokens'] = 'Active tokens';
+$string['status_untracked_tokens'] = '{$a} token(s) for the UBION AI service user were not issued by this plugin and were left in place. Revoke them manually if they are no longer needed.';
 $string['status_tokencreated'] = 'Token created';
 $string['status_tokenlastaccess'] = 'Token last used';
 $string['status_never'] = 'Never';
@@ -69,7 +70,7 @@ $string['connect_warning'] = 'Connecting creates a service user with a manager-a
 $string['regcode'] = 'Registration code';
 $string['regcode_help'] = 'The one-time registration code issued by the hub administrator. The code is used once during registration and is never stored or logged. Leave empty to provision the local web service without registering with the hub.';
 $string['disconnect'] = 'Disconnect';
-$string['disconnectconfirm'] = 'This deletes the web service token for the UBION AI service user. The user, role and service are kept. Continue?';
+$string['disconnectconfirm'] = 'This deletes only the web service token(s) issued by this plugin for the UBION AI service user. Tokens not issued by this plugin are kept. The user, role and service are kept. Continue?';
 $string['connect_success'] = 'Connection provisioned successfully. Web service token issued for the UBION AI service user.';
 $string['connect_success_nohub'] = 'Provisioned locally; no hub URL is configured, so the site was not registered with a hub.';
 $string['connect_hub_needcode'] = 'The hub is configured but the site is not registered yet. Enter the one-time registration code from the hub administrator and connect again.';
@@ -89,6 +90,7 @@ $string['hub_registered_at'] = 'Registered with hub';
 $string['hub_egress_hint'] = 'If the hub requires IP restriction, allow {$a} (the hub egress IP) in --iprestriction.';
 $string['disconnect_hub_note'] = 'The hub tenant was not removed. Ask the hub administrator to delete it before registering this site again, otherwise registration returns "already registered".';
 $string['disconnect_success'] = 'Connection removed. {$a} token(s) deleted.';
+$string['disconnect_untracked_warning'] = '{$a} token(s) not issued by this plugin were left in place.';
 
 // Events.
 $string['event_site_connected'] = 'UBION AI site connected';
@@ -98,6 +100,7 @@ $string['event_site_disconnected_desc'] = 'The UBION AI web service token was de
 
 // CLI.
 $string['cli_regcode_argv_warning'] = 'Warning: --regcode is visible in the process list and shell history. Prefer --regcode-file or --regcode-file=-.';
+$string['cli_iprestriction_invalid'] = 'Invalid --iprestriction value: {$a}';
 $string['cli_regcode_perms_warning'] = 'Warning: the registration code file is group- or world-readable. Restrict it to the Moodle process user (for example chmod 600).';
 $string['cli_usage'] = 'Usage:
     php local/ubionai/cli/connection.php --status
@@ -107,4 +110,6 @@ $string['cli_usage'] = 'Usage:
     php local/ubionai/cli/connection.php --disconnect
 
 --regcode-file=PATH reads the first line of a regular file (at most 1 KiB); use - to read stdin.
---regcode=VALUE is supported but visible in the process list and shell history.';
+--regcode=VALUE is supported but visible in the process list and shell history.
+--iprestriction=LIST is a comma-separated list of IP addresses or CIDR networks (IPv4/IPv6).
+  Entries are normalised; invalid values exit with code 2. It requires --connect.';

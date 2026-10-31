@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
     }
 
     if ($action === 'disconnect') {
-        $deleted = provisioner::disconnect();
+        $result = provisioner::disconnect();
         unset_config('connected_at', 'local_ubionai');
         unset_config('hub_siteid', 'local_ubionai');
         unset_config('hub_mcp_endpoint', 'local_ubionai');
@@ -94,7 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
 
         $status = provisioner::status();
         $event = site_disconnected::create_from_service((int) ($status['serviceid'] ?? 0), [
-            'tokensdeleted' => (int) $deleted,
+            'tokensdeleted' => (int) $result['deleted'],
+            'tokensuntracked' => (int) $result['untracked'],
         ]);
         $event->trigger();
 
@@ -102,8 +103,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
             \core\notification::add(get_string('disconnect_hub_note', 'local_ubionai'),
                 \core\notification::INFO);
         }
+        if ($result['untracked'] > 0) {
+            \core\notification::add(
+                get_string('disconnect_untracked_warning', 'local_ubionai', $result['untracked']),
+                \core\notification::WARNING);
+        }
 
-        redirect($pageurl, get_string('disconnect_success', 'local_ubionai', $deleted), null,
+        redirect($pageurl, get_string('disconnect_success', 'local_ubionai', $result['deleted']), null,
             notification::NOTIFY_SUCCESS);
     }
 
@@ -124,6 +130,11 @@ echo $OUTPUT->header();
 
 if ($status['token_count'] > 0 && !$status['hub_configured']) {
     echo $OUTPUT->notification(get_string('token_warning_unused', 'local_ubionai'),
+        notification::NOTIFY_WARNING);
+}
+if ($status['tokens_untracked'] > 0) {
+    echo $OUTPUT->notification(
+        get_string('status_untracked_tokens', 'local_ubionai', $status['tokens_untracked']),
         notification::NOTIFY_WARNING);
 }
 if (!$status['hub_configured']) {
