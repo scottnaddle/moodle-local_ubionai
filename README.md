@@ -4,7 +4,7 @@ Moodle 5.x local plugin that exposes a few course-authoring operations as web se
 functions, for use by the Grokbot / moodle-mcp server. No database tables; uninstalls cleanly.
 
 * Component: `local_grokbot` — install to `public/local/grokbot`
-* Requires Moodle 5.1+ (2025100600)
+* Requires Moodle 5.3 LTS+ (2026100500)
 
 ## Functions
 
