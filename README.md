@@ -105,7 +105,7 @@ maximum grade through the grade calculator.
 }
 ```
 
-Questions are saved in a `grokbot` category under the quiz's own question bank and appended to the
+Questions are saved in a `ubionai` category under the quiz's own question bank and appended to the
 quiz. Returns `{questionids, sumgrades}`. Requires `mod/quiz:manage` and `moodle/question:add`.
 Rejected if the quiz already has attempts.
 
@@ -167,6 +167,40 @@ qualify. Returns `{badgeid, status, awards, warnings}`. Requires badges and cour
 1. Copy this directory to `public/local/ubionai` and run the upgrade.
 2. Add the functions to the external service used by the bot's token.
 
+## Connection
+
+The plugin can provision its own Moodle web service connection.
+
+* **Settings** — Site administration > Plugins > Local plugins > UBION AI connection. The optional
+  `Hub URL` must start with `https://`; leave it empty to provision the web service locally without
+  registering with a hub.
+* **Status page** — `/local/ubionai/connect.php` shows the connection state and has *Connect* and
+  *Disconnect* buttons. *Connect* enables web services and REST, creates the `svc_ubionai` service
+  user, the `ubionai_service` role, the restricted `ubionai` external service with its functions,
+  authorises the user and issues one permanent token. *Disconnect* deletes the token(s) but keeps the
+  user, role and service so reconnecting is cheap and idempotent.
+* **CLI** — from the Moodle dirroot:
+
+  ```
+  php local/ubionai/cli/connection.php --status
+  php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10]
+  php local/ubionai/cli/connection.php --disconnect
+  ```
+
+The web service token is never returned by any API, printed, echoed, logged or written to plugin
+config. Only token metadata (count, `timecreated`, `lastaccess`) is observable. Moodle core itself
+stores `external_tokens.token` in plain text; that is outside this plugin's control. Hub
+registration is a stub in this iteration: with a hub URL configured, *Connect* completes the local
+setup and reports that hub registration is not available yet.
+
+## Privacy
+
+The plugin itself stores no personal data in Moodle and has no database tables or user preferences.
+It sends data outbound to the UBION AI hub and its LLM sub-processors (full name, email, grades,
+submissions, forum authors/posts, course content and staff prompts) so staff requests can be
+answered. The privacy provider declares this external location; export and deletion requests are
+no-ops until hub-side handling ships in a later iteration.
+
 ## Installation
 
 Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS or later, `requires = 2026100500`),
@@ -174,11 +208,22 @@ then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
 
+### 0.2.0 (2026103101)
+
+* Full privacy provider describing the external UBION AI hub location.
+* One-click connection: admin status page, settings, CLI tool, idempotent provisioner and
+  connect/disconnect events.
+* The quiz question category is now named `ubionai`; the upgrade renames existing top-level
+  `grokbot` categories in quiz contexts (skipping contexts that already have an `ubionai` sibling).
+* The setup script requires `--token-file` unless `--no-token` is passed, hardens token file
+  permissions and never prints the token.
+
+### 0.1.0 (2026103100)
+
 This plugin was previously developed as `local_grokbot` inside the `moodle-agent-mcp` repository and was
 split out (with history) and renamed to `local_ubionai`. It is a new component: version restarts at
 2026103100 (release 0.1.0). Uninstall `local_grokbot` before or after installing this plugin; there are no
-database tables to migrate. Note: the question category created for quiz questions is still named `grokbot`
-(unchanged behaviour).
+database tables to migrate.
 
 ## License
 
