@@ -15,17 +15,17 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details for local_grokbot.
+ * Version details for local_ubionai.
  *
- * @package    local_grokbot
+ * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_grokbot';
-$plugin->version = 2026103105;
+$plugin->component = 'local_ubionai';
+$plugin->version = 2026103100;
 $plugin->requires = 2026100500;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.3.1';
+$plugin->release = '0.1.0';

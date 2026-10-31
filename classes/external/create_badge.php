@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_grokbot\external;
+namespace local_ubionai\external;
 
 use core_badges\badge;
 use core_external\external_api;
@@ -23,12 +23,12 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use invalid_parameter_exception;
-use local_grokbot\local\helper;
+use local_ubionai\local\helper;
 
 /**
  * Create a course badge awarded for completing activities and/or the course with a minimum grade.
  *
- * @package    local_grokbot
+ * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -220,7 +220,7 @@ class create_badge extends external_api {
         }
         $file = make_request_directory() . '/badge.png';
         if (!self::draw_image($file, $badge->name)) {
-            copy($CFG->dirroot . '/local/grokbot/pix/badge.png', $file);
+            copy($CFG->dirroot . '/local/ubionai/pix/badge.png', $file);
         }
         // Deletes the temporary file.
         badges_process_badge_image($badge, $file);

@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Web service function definitions for local_grokbot.
+ * Web service function definitions for local_ubionai.
  *
- * @package    local_grokbot
+ * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -25,57 +25,57 @@
 defined('MOODLE_INTERNAL') || die();
 
 $functions = [
-    'local_grokbot_create_module' => [
-        'classname' => 'local_grokbot\external\create_module',
+    'local_ubionai_create_module' => [
+        'classname' => 'local_ubionai\external\create_module',
         'description' => 'Create an assign, quiz, forum, page, resource, url, workshop, wiki, glossary, feedback, '
             . 'h5pactivity or openmaic activity in a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities, mod/*:addinstance',
     ],
-    'local_grokbot_update_module' => [
-        'classname' => 'local_grokbot\external\update_module',
+    'local_ubionai_update_module' => [
+        'classname' => 'local_ubionai\external\update_module',
         'description' => 'Update name, intro, visibility, settings, completion and access restrictions of an activity.',
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities',
     ],
-    'local_grokbot_add_quiz_questions' => [
-        'classname' => 'local_grokbot\external\add_quiz_questions',
+    'local_ubionai_add_quiz_questions' => [
+        'classname' => 'local_ubionai\external\add_quiz_questions',
         'description' => 'Create questions in the quiz question bank and add them to the quiz.',
         'type' => 'write',
         'capabilities' => 'mod/quiz:manage, moodle/question:add',
     ],
-    'local_grokbot_update_section' => [
-        'classname' => 'local_grokbot\external\update_section',
+    'local_ubionai_update_section' => [
+        'classname' => 'local_ubionai\external\update_section',
         'description' => 'Update the name and/or summary of a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
     ],
-    'local_grokbot_add_sections' => [
-        'classname' => 'local_grokbot\external\add_sections',
+    'local_ubionai_add_sections' => [
+        'classname' => 'local_ubionai\external\add_sections',
         'description' => 'Append named sections to a course.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
     ],
-    'local_grokbot_set_section_availability' => [
-        'classname' => 'local_grokbot\external\set_section_availability',
+    'local_ubionai_set_section_availability' => [
+        'classname' => 'local_ubionai\external\set_section_availability',
         'description' => 'Set the access restrictions (availability JSON) of a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
     ],
-    'local_grokbot_set_rubric' => [
-        'classname' => 'local_grokbot\external\set_rubric',
+    'local_ubionai_set_rubric' => [
+        'classname' => 'local_ubionai\external\set_rubric',
         'description' => 'Define or replace the rubric of an activity grading area or of a rubric-strategy workshop.',
         'type' => 'write',
         'capabilities' => 'moodle/grade:managegradingforms, mod/workshop:editdimensions',
     ],
-    'local_grokbot_set_grade_categories' => [
-        'classname' => 'local_grokbot\external\set_grade_categories',
+    'local_ubionai_set_grade_categories' => [
+        'classname' => 'local_ubionai\external\set_grade_categories',
         'description' => 'Create or reuse weighted grade categories and move activity grade items into them.',
         'type' => 'write',
         'capabilities' => 'moodle/grade:manage',
     ],
-    'local_grokbot_create_badge' => [
-        'classname' => 'local_grokbot\external\create_badge',
+    'local_ubionai_create_badge' => [
+        'classname' => 'local_ubionai\external\create_badge',
         'description' => 'Create a course badge with activity completion and/or course grade criteria.',
         'type' => 'write',
         'capabilities' => 'moodle/badges:createbadge, moodle/badges:configurecriteria',

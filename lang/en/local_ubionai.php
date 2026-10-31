@@ -15,14 +15,14 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * English strings for local_grokbot.
+ * English strings for local_ubionai.
  *
- * @package    local_grokbot
+ * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Grokbot web services';
-$string['privacy:metadata'] = 'The Grokbot web services plugin does not store any personal data.';
+$string['pluginname'] = 'UbionAI web services';
+$string['privacy:metadata'] = 'The UbionAI web services plugin does not store any personal data.';

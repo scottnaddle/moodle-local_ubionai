@@ -14,15 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_grokbot\local;
+namespace local_ubionai\local;
 
 use invalid_parameter_exception;
 use stdClass;
 
 /**
- * Shared helpers for the local_grokbot external functions.
+ * Shared helpers for the local_ubionai external functions.
  *
- * @package    local_grokbot
+ * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -883,7 +883,7 @@ class helper {
 
         $category = new stdClass();
         $category->name = 'grokbot';
-        $category->info = 'Questions created by the Grokbot web service.';
+        $category->info = 'Questions created by the UbionAI web service.';
         $category->infoformat = FORMAT_HTML;
         $category->contextid = $context->id;
         $category->parent = $top->id;

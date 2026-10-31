@@ -1,9 +1,9 @@
-# local_grokbot
+# local_ubionai
 
 Moodle 5.x local plugin that exposes a few course-authoring operations as web service
-functions, for use by the Grokbot / moodle-mcp server. No database tables; uninstalls cleanly.
+functions, for use by the UbionAI / moodle-agent-mcp server. No database tables; uninstalls cleanly.
 
-* Component: `local_grokbot` — install to `public/local/grokbot`
+* Component: `local_ubionai` — install to `public/local/ubionai`
 * Requires Moodle 5.3 LTS+ (2026100500)
 
 ## Functions
@@ -11,7 +11,7 @@ functions, for use by the Grokbot / moodle-mcp server. No database tables; unins
 All functions validate parameters, validate the context and check capabilities. Settings and
 questions are passed as JSON strings; invalid JSON raises `invalid_parameter_exception`.
 
-### `local_grokbot_create_module`
+### `local_ubionai_create_module`
 
 | param | type | default |
 |---|---|---|
@@ -77,7 +77,7 @@ Common keys for every module type:
   `{"op":"&","c":[{"type":"completion","cm":12,"e":1}],"showc":[true]}`. `""`/`null` removes all
   restrictions. The tree is validated; invalid trees raise `invalid_parameter_exception`.
 
-### `local_grokbot_update_module`
+### `local_ubionai_update_module`
 
 `cmid`, `name` (`''` = unchanged), `intro` (`''` = unchanged), `visible` (`-1` = unchanged),
 `settings` (JSON object of fields to change). Returns `{cmid, updated}`.
@@ -89,7 +89,7 @@ url parameters, page content and resource files (pass `files` to replace them), 
 create are accepted; changing completion resets the activity's completion state. For quizzes, `grade` changes the
 maximum grade through the grade calculator.
 
-### `local_grokbot_add_quiz_questions`
+### `local_ubionai_add_quiz_questions`
 
 `quizid` (quiz instance id) and `questions`, a JSON array of:
 
@@ -109,24 +109,24 @@ Questions are saved in a `grokbot` category under the quiz's own question bank a
 quiz. Returns `{questionids, sumgrades}`. Requires `mod/quiz:manage` and `moodle/question:add`.
 Rejected if the quiz already has attempts.
 
-### `local_grokbot_update_section`
+### `local_ubionai_update_section`
 
 `courseid`, `section` (number), `name` (null = unchanged, `''` = default name), `summary`
 (HTML, null = unchanged). Returns `{sectionid, updated}`. Names longer than 255 characters and
 unknown section numbers raise `invalid_parameter_exception`. Requires `moodle/course:update`.
 
-### `local_grokbot_add_sections`
+### `local_ubionai_add_sections`
 
 `courseid`, `names` (list; `''` = default name), `summaries` (optional list of HTML, matched to
 `names` by position). Appends the sections to the end of the course (at most 50 per call).
 Returns `{sections: [{id, section}]}`. Requires `moodle/course:update`.
 
-### `local_grokbot_set_section_availability`
+### `local_ubionai_set_section_availability`
 
 `courseid`, `section` (number), `availability` (core_availability JSON tree; `''` = no restrictions).
 Returns `{sectionid, availability}`. Requires `moodle/course:update`.
 
-### `local_grokbot_set_rubric`
+### `local_ubionai_set_rubric`
 
 `cmid`, `name`, `criteria` (JSON `[{"description": "...", "levels": [{"definition": "...", "score": 0}]}]`),
 `description` (HTML, `''`), `areaname` (`submissions`). Each criterion needs a description and at least two
@@ -140,7 +140,7 @@ levels with distinct scores >= 0. Returns `{definitionid, method, criteria, maxs
   numbers 0-100. Rejected once assessments have been graded. `definitionid` is 0. Requires
   `mod/workshop:editdimensions`.
 
-### `local_grokbot_set_grade_categories`
+### `local_ubionai_set_grade_categories`
 
 `courseid`, `categories` (JSON `[{"name": "...", "weight": 25, "cmids": [12, {"cmid": 13, "itemnumber": 1}]}]`),
 `aggregation` (`weighted_mean` \| `natural` \| `mean`, default `weighted_mean`). Sets the course category's
@@ -152,7 +152,7 @@ stored as an overridden weight; ignored for `mean`). New categories use the same
 uncategorised}` where `uncategorised` counts grade items still directly in the course category.
 Requires `moodle/grade:manage`.
 
-### `local_grokbot_create_badge`
+### `local_ubionai_create_badge`
 
 `courseid`, `name`, `description`, `criteria` (JSON `{"activities": [cmid, ...], "min_course_grade": 70}`),
 `enable` (default false). Creates a course badge (issuer: site defaults) with an "all criteria" overall rule,
@@ -164,5 +164,22 @@ qualify. Returns `{badgeid, status, awards, warnings}`. Requires badges and cour
 
 ## Setup
 
-1. Copy this directory to `public/local/grokbot` and run the upgrade.
+1. Copy this directory to `public/local/ubionai` and run the upgrade.
 2. Add the functions to the external service used by the bot's token.
+
+## Installation
+
+Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS or later, `requires = 2026100500`),
+then run the upgrade (`php admin/cli/upgrade.php`).
+
+## History
+
+This plugin was previously developed as `local_grokbot` inside the `moodle-agent-mcp` repository and was
+split out (with history) and renamed to `local_ubionai`. It is a new component: version restarts at
+2026103100 (release 0.1.0). Uninstall `local_grokbot` before or after installing this plugin; there are no
+database tables to migrate. Note: the question category created for quiz questions is still named `grokbot`
+(unchanged behaviour).
+
+## License
+
+GNU General Public License v3.0 or later (GPL-3.0-or-later). See `LICENSE`.

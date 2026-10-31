@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_grokbot\external;
+namespace local_ubionai\external;
 
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -22,13 +22,13 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use invalid_parameter_exception;
-use local_grokbot\local\helper;
+use local_ubionai\local\helper;
 use stdClass;
 
 /**
  * Create questions in a quiz's question bank and add them to the quiz.
  *
- * @package    local_grokbot
+ * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
