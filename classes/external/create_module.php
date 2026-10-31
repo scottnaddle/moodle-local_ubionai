@@ -24,7 +24,7 @@ use invalid_parameter_exception;
 use local_grokbot\local\helper;
 
 /**
- * Create an assign, quiz, forum, page, resource or url activity.
+ * Create an activity of one of the supported module types (see helper::SUPPORTED_MODULES).
  *
  * @package    local_grokbot
  * @copyright  2026 scottnaddle
@@ -40,7 +40,8 @@ class create_module extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id'),
             'section' => new external_value(PARAM_INT, 'Section number (not id)'),
-            'modname' => new external_value(PARAM_PLUGIN, 'Module type: assign, quiz, forum, page, resource or url'),
+            'modname' => new external_value(PARAM_PLUGIN, 'Module type: assign, quiz, forum, page, resource, url, '
+                . 'workshop, wiki, glossary, feedback, h5pactivity or openmaic'),
             'name' => new external_value(PARAM_TEXT, 'Activity name'),
             'intro' => new external_value(PARAM_RAW, 'Description (HTML)', VALUE_DEFAULT, ''),
             'visible' => new external_value(PARAM_INT, '1 = visible, 0 = hidden', VALUE_DEFAULT, 1),
@@ -91,6 +92,10 @@ class create_module extends external_api {
         $context = \context_course::instance($course->id);
         self::validate_context($context);
         require_capability('moodle/course:manageactivities', $context);
+        $module = $DB->get_record('modules', ['name' => $params['modname']]);
+        if (!$module || !$module->visible) {
+            throw new invalid_parameter_exception("Module '{$params['modname']}' is not installed or is disabled on this site");
+        }
         require_capability('mod/' . $params['modname'] . ':addinstance', $context);
         if (empty($params['visible'])) {
             require_capability('moodle/course:activityvisibility', $context);
@@ -98,7 +103,7 @@ class create_module extends external_api {
 
         $moduleinfo = (object) helper::module_defaults($params['modname']);
         $moduleinfo->modulename = $params['modname'];
-        $moduleinfo->module = $DB->get_field('modules', 'id', ['name' => $params['modname']], MUST_EXIST);
+        $moduleinfo->module = $module->id;
         $moduleinfo->course = $course->id;
         $moduleinfo->section = $params['section'];
         $moduleinfo->name = trim($params['name']);

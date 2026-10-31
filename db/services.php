@@ -27,10 +27,13 @@ defined('MOODLE_INTERNAL') || die();
 $functions = [
     'local_grokbot_create_module' => [
         'classname' => 'local_grokbot\external\create_module',
-        'description' => 'Create an assign, quiz, forum, page, resource or url activity in a course section.',
+        'description' => 'Create an assign, quiz, forum, page, resource, url, workshop, wiki, glossary, feedback, '
+            . 'h5pactivity or openmaic activity in a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities, mod/assign:addinstance, mod/quiz:addinstance, '
-            . 'mod/forum:addinstance, mod/page:addinstance, mod/resource:addinstance, mod/url:addinstance',
+            . 'mod/forum:addinstance, mod/page:addinstance, mod/resource:addinstance, mod/url:addinstance, '
+            . 'mod/workshop:addinstance, mod/wiki:addinstance, mod/glossary:addinstance, mod/feedback:addinstance, '
+            . 'mod/h5pactivity:addinstance, mod/openmaic:addinstance',
     ],
     'local_grokbot_update_module' => [
         'classname' => 'local_grokbot\external\update_module',
@@ -61,5 +64,23 @@ $functions = [
         'description' => 'Set the access restrictions (availability JSON) of a course section.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
+    ],
+    'local_grokbot_set_rubric' => [
+        'classname' => 'local_grokbot\external\set_rubric',
+        'description' => 'Define or replace the rubric of an activity grading area or of a rubric-strategy workshop.',
+        'type' => 'write',
+        'capabilities' => 'moodle/grade:managegradingforms, mod/workshop:editdimensions',
+    ],
+    'local_grokbot_set_grade_categories' => [
+        'classname' => 'local_grokbot\external\set_grade_categories',
+        'description' => 'Create or reuse weighted grade categories and move activity grade items into them.',
+        'type' => 'write',
+        'capabilities' => 'moodle/grade:manage',
+    ],
+    'local_grokbot_create_badge' => [
+        'classname' => 'local_grokbot\external\create_badge',
+        'description' => 'Create a course badge with activity completion and/or course grade criteria.',
+        'type' => 'write',
+        'capabilities' => 'moodle/badges:createbadge, moodle/badges:configurecriteria',
     ],
 ];

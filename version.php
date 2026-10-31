@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_grokbot';
-$plugin->version = 2026103101;
+$plugin->version = 2026103102;
 $plugin->requires = 2025100600;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.2.0';
+$plugin->release = '0.3.0';

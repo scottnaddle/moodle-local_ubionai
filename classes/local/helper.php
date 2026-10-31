@@ -28,7 +28,10 @@ use stdClass;
  */
 class helper {
     /** @var string[] Module types supported by create_module. */
-    public const SUPPORTED_MODULES = ['assign', 'quiz', 'forum', 'page', 'resource', 'url'];
+    public const SUPPORTED_MODULES = [
+        'assign', 'quiz', 'forum', 'page', 'resource', 'url', 'workshop', 'wiki', 'glossary', 'feedback', 'h5pactivity',
+        'openmaic',
+    ];
 
     /** @var string[] moduleinfo keys that callers may never override through the settings JSON. */
     private const PROTECTED_KEYS = [
@@ -47,6 +50,7 @@ class helper {
     private const COMPLETION_RULE_KEYS = [
         'completionsubmit', 'completionposts', 'completiondiscussions', 'completionreplies', 'completionusegrade',
         'completionpassgrade', 'completionattemptsexhausted', 'completionminattempts', 'completionview',
+        'completionentries', 'completionminprogress',
     ];
 
     /**
@@ -263,6 +267,120 @@ class helper {
                 ];
                 break;
 
+            case 'workshop':
+                $config = get_config('workshop');
+                $editor = ['text' => '', 'format' => FORMAT_HTML, 'itemid' => 0];
+                $defaults = [
+                    'strategy' => (string) ($config->strategy ?? 'accumulative'),
+                    'grade' => (float) ($config->grade ?? 80),
+                    'gradinggrade' => (float) ($config->gradinggrade ?? 20),
+                    'gradedecimals' => (int) ($config->gradedecimals ?? 0),
+                    'submissiontypetext' => 1, // WORKSHOP_SUBMISSION_TYPE_AVAILABLE.
+                    'submissiontypefile' => 1,
+                    'nattachments' => 1,
+                    'submissionfiletypes' => '',
+                    'maxbytes' => (int) ($config->maxbytes ?? 0),
+                    'latesubmissions' => 0,
+                    'useselfassessment' => 0,
+                    'overallfeedbackmode' => 1,
+                    'overallfeedbackfiles' => 0,
+                    'overallfeedbackfiletypes' => '',
+                    'overallfeedbackmaxbytes' => (int) ($config->maxbytes ?? 0),
+                    'useexamples' => 0,
+                    'examplesmode' => (int) ($config->examplesmode ?? 0),
+                    'submissionstart' => 0,
+                    'submissionend' => 0,
+                    'phaseswitchassessment' => 0,
+                    'assessmentstart' => 0,
+                    'assessmentend' => 0,
+                    // The editors carry no draft area: the raw HTML fields below are stored as they are.
+                    'instructauthorseditor' => $editor,
+                    'instructreviewerseditor' => $editor,
+                    'conclusioneditor' => $editor,
+                    'instructauthors' => '',
+                    'instructauthorsformat' => FORMAT_HTML,
+                    'instructreviewers' => '',
+                    'instructreviewersformat' => FORMAT_HTML,
+                    'conclusion' => '',
+                    'conclusionformat' => FORMAT_HTML,
+                ];
+                break;
+
+            case 'wiki':
+                $defaults = [
+                    'wikimode' => 'collaborative',
+                    'firstpagetitle' => '',
+                    'defaultformat' => 'html',
+                    'forceformat' => 0,
+                ];
+                break;
+
+            case 'glossary':
+                $defaults = [
+                    'globalglossary' => 0,
+                    'mainglossary' => 0,
+                    'defaultapproval' => (int) ($CFG->glossary_defaultapproval ?? 1),
+                    'editalways' => 0,
+                    'allowduplicatedentries' => (int) ($CFG->glossary_dupentries ?? 0),
+                    'allowcomments' => (int) ($CFG->glossary_allowcomments ?? 0),
+                    'usedynalink' => (int) ($CFG->glossary_linkbydefault ?? 1),
+                    'displayformat' => 'dictionary',
+                    'approvaldisplayformat' => 'default',
+                    'entbypage' => (int) (!empty($CFG->glossary_entbypage) ? $CFG->glossary_entbypage : 10),
+                    'showalphabet' => 1,
+                    'showall' => 1,
+                    'showspecial' => 1,
+                    'allowprintview' => 1,
+                    'rsstype' => 0,
+                    'rssarticles' => 0,
+                    'assessed' => 0,
+                    'scale' => 0,
+                    'assesstimestart' => 0,
+                    'assesstimefinish' => 0,
+                    'completionentries' => 0,
+                ];
+                break;
+
+            case 'feedback':
+                $defaults = [
+                    'anonymous' => 1, // FEEDBACK_ANONYMOUS_YES.
+                    'email_notification' => 0,
+                    'multiple_submit' => 0,
+                    'autonumbering' => 0,
+                    'site_after_submit' => '',
+                    'page_after_submit' => '',
+                    'page_after_submitformat' => FORMAT_HTML,
+                    // No draft area: page_after_submit is stored as it is.
+                    'page_after_submit_editor' => ['text' => '', 'format' => FORMAT_HTML, 'itemid' => 0],
+                    'publish_stats' => 0,
+                    'timeopen' => 0,
+                    'timeclose' => 0,
+                    'completionsubmit' => 0,
+                ];
+                break;
+
+            case 'h5pactivity':
+                $core = (new \core_h5p\factory())->get_core();
+                $defaults = [
+                    'packagefile' => 0,
+                    'grade' => 100,
+                    'displayoptions' => \core_h5p\helper::get_display_options($core,
+                        \core_h5p\helper::decode_display_options($core)),
+                    'enabletracking' => 1,
+                    'grademethod' => 1, // \mod_h5pactivity\local\manager::GRADEHIGHESTATTEMPT.
+                    'reviewmode' => 1, // \mod_h5pactivity\local\manager::REVIEWCOMPLETION.
+                ];
+                break;
+
+            case 'openmaic':
+                $defaults = [
+                    'manuscript' => '',
+                    'lectureid' => '',
+                    'grade' => 100,
+                    'completionminprogress' => 0,
+                ];
+                break;
+
             default:
                 throw new invalid_parameter_exception("Unsupported module type: {$modname}");
         }
@@ -416,6 +534,123 @@ class helper {
         if ($modname === 'page' && isset($moduleinfo->content) && !is_string($moduleinfo->content)) {
             throw new invalid_parameter_exception('settings.content must be an HTML string');
         }
+        switch ($modname) {
+            case 'workshop':
+                self::validate_workshop_settings($moduleinfo);
+                break;
+            case 'wiki':
+                if (!in_array($moduleinfo->wikimode ?? '', ['collaborative', 'individual'], true)) {
+                    throw new invalid_parameter_exception('settings.wikimode must be collaborative or individual');
+                }
+                if (!in_array($moduleinfo->defaultformat ?? '', ['html', 'creole', 'nwiki'], true)) {
+                    throw new invalid_parameter_exception('settings.defaultformat must be html, creole or nwiki');
+                }
+                if ($creating) {
+                    $title = trim((string) ($moduleinfo->firstpagetitle ?? ''));
+                    $moduleinfo->firstpagetitle = $title === '' ? $moduleinfo->name : $title;
+                }
+                break;
+            case 'glossary':
+                $formats = get_list_of_plugins('mod/glossary/formats', 'TEMPLATE');
+                if (!in_array($moduleinfo->displayformat ?? '', $formats, true)) {
+                    throw new invalid_parameter_exception('settings.displayformat must be one of: ' . implode(', ', $formats));
+                }
+                break;
+            case 'feedback':
+                if (isset($moduleinfo->page_after_submit)) {
+                    $moduleinfo->page_after_submit_editor = [
+                        'text' => (string) $moduleinfo->page_after_submit,
+                        'format' => FORMAT_HTML,
+                        'itemid' => 0,
+                    ];
+                }
+                break;
+            case 'h5pactivity':
+                $itemid = $moduleinfo->packagefile ?? 0;
+                if (!is_numeric($itemid) || (int) $itemid < 0) {
+                    throw new invalid_parameter_exception('settings.packagefile must be a draft item id');
+                }
+                $moduleinfo->packagefile = (int) $itemid;
+                if ($moduleinfo->packagefile === 0 && $creating) {
+                    throw new invalid_parameter_exception('settings.packagefile (draft item id with the .h5p file) is required');
+                }
+                if ($moduleinfo->packagefile !== 0) {
+                    $usercontext = \context_user::instance($USER->id);
+                    $files = get_file_storage()->get_area_files($usercontext->id, 'user', 'draft', $moduleinfo->packagefile,
+                        'id', false);
+                    if (count($files) !== 1 || !preg_match('/\.h5p$/i', reset($files)->get_filename())) {
+                        throw new invalid_parameter_exception(
+                            "settings.packagefile: draft area {$moduleinfo->packagefile} must contain exactly one .h5p file");
+                    }
+                }
+                break;
+            case 'openmaic':
+                $progress = $moduleinfo->completionminprogress ?? 0;
+                if (!is_numeric($progress) || (int) $progress < 0 || (int) $progress > 100) {
+                    throw new invalid_parameter_exception('settings.completionminprogress must be between 0 and 100');
+                }
+                $moduleinfo->completionminprogress = (int) $progress;
+                $lectureid = trim((string) ($moduleinfo->lectureid ?? ''));
+                if ($lectureid !== clean_param($lectureid, PARAM_ALPHANUMEXT) || \core_text::strlen($lectureid) > 64) {
+                    throw new invalid_parameter_exception('settings.lectureid must be at most 64 letters, digits, - or _');
+                }
+                $moduleinfo->lectureid = $lectureid;
+                if (isset($moduleinfo->manuscript) && !is_string($moduleinfo->manuscript)) {
+                    throw new invalid_parameter_exception('settings.manuscript must be a string');
+                }
+                break;
+        }
+    }
+
+    /**
+     * Validate and normalise workshop settings.
+     *
+     * @param stdClass $moduleinfo moduleinfo being built
+     * @throws invalid_parameter_exception
+     */
+    private static function validate_workshop_settings(stdClass $moduleinfo): void {
+        global $CFG;
+        require_once($CFG->libdir . '/gradelib.php');
+
+        $strategies = array_keys(\core_component::get_plugin_list('workshopform'));
+        if (!in_array($moduleinfo->strategy ?? '', $strategies, true)) {
+            throw new invalid_parameter_exception('settings.strategy must be one of: ' . implode(', ', $strategies));
+        }
+        foreach (['grade', 'gradinggrade'] as $field) {
+            if (!is_numeric($moduleinfo->$field ?? null) || $moduleinfo->$field < 0) {
+                throw new invalid_parameter_exception("settings.{$field} must be a number >= 0");
+            }
+        }
+        foreach (['submissiontypetext', 'submissiontypefile'] as $field) {
+            if (!in_array((int) ($moduleinfo->$field ?? -1), [0, 1, 2], true)) {
+                throw new invalid_parameter_exception("settings.{$field} must be 0 (disabled), 1 (available) or 2 (required)");
+            }
+            $moduleinfo->$field = (int) $moduleinfo->$field;
+        }
+        if (!$moduleinfo->submissiontypetext && !$moduleinfo->submissiontypefile) {
+            throw new invalid_parameter_exception('At least one of settings.submissiontypetext / submissiontypefile must be enabled');
+        }
+        // Instructions are given as plain HTML fields; the editors only carry the text.
+        foreach (['instructauthors', 'instructreviewers', 'conclusion'] as $field) {
+            if (!is_string($moduleinfo->$field ?? '')) {
+                throw new invalid_parameter_exception("settings.{$field} must be an HTML string");
+            }
+            $moduleinfo->{$field . 'editor'} = [
+                'text' => (string) ($moduleinfo->$field ?? ''),
+                'format' => FORMAT_HTML,
+                'itemid' => 0,
+            ];
+            $moduleinfo->{$field . 'format'} = FORMAT_HTML;
+        }
+        // workshop_add_instance() moves both grade items into these categories.
+        $coursecategory = \grade_category::fetch_course_category($moduleinfo->course);
+        foreach (['gradecategory', 'gradinggradecategory'] as $field) {
+            if (empty($moduleinfo->$field)) {
+                $moduleinfo->$field = $coursecategory->id;
+            } else if (!\grade_category::fetch(['id' => (int) $moduleinfo->$field, 'courseid' => $moduleinfo->course])) {
+                throw new invalid_parameter_exception("settings.{$field} is not a grade category of this course");
+            }
+        }
     }
 
     /**
@@ -521,6 +756,20 @@ class helper {
                 }
                 $data->assignsubmission_file_maxfiles = $data->assignsubmission_file_maxfiles ?? 1;
                 $data->assignsubmission_file_maxsizebytes = $data->assignsubmission_file_maxsizebytes ?? 0;
+                break;
+
+            case 'workshop':
+                require_once($CFG->libdir . '/gradelib.php');
+                // Keep both grade items in their current categories (workshop_update_instance() moves them).
+                $items = \grade_item::fetch_all(['itemtype' => 'mod', 'itemmodule' => 'workshop',
+                    'iteminstance' => $data->instance, 'courseid' => $course->id]) ?: [];
+                foreach ($items as $item) {
+                    if ((int) $item->itemnumber === 0) {
+                        $data->gradecategory = $item->categoryid;
+                    } else if ((int) $item->itemnumber === 1) {
+                        $data->gradinggradecategory = $item->categoryid;
+                    }
+                }
                 break;
 
             case 'page':
