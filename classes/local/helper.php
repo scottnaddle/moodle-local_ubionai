@@ -27,6 +27,9 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class helper {
+    /** @var string Question category used for questions created by the plugin. */
+    public const QUESTION_CATEGORY = 'ubionai';
+
     /** @var string[] Module types supported by create_module. */
     public const SUPPORTED_MODULES = [
         'assign', 'quiz', 'forum', 'page', 'resource', 'url', 'workshop', 'wiki', 'glossary', 'feedback', 'h5pactivity',
@@ -865,7 +868,7 @@ class helper {
     }
 
     /**
-     * Resolve the id of the 'grokbot' question category in a quiz's question bank, creating it if needed.
+     * Resolve the id of the plugin's question category in a quiz's question bank, creating it if needed.
      *
      * @param \context_module $context quiz module context
      * @return stdClass category record
@@ -876,13 +879,13 @@ class helper {
 
         $top = question_get_top_category($context->id, true);
         $category = $DB->get_record('question_categories',
-            ['contextid' => $context->id, 'parent' => $top->id, 'name' => 'grokbot'], '*', IGNORE_MULTIPLE);
+            ['contextid' => $context->id, 'parent' => $top->id, 'name' => self::QUESTION_CATEGORY], '*', IGNORE_MULTIPLE);
         if ($category) {
             return $category;
         }
 
         $category = new stdClass();
-        $category->name = 'grokbot';
+        $category->name = self::QUESTION_CATEGORY;
         $category->info = 'Questions created by the UbionAI web service.';
         $category->infoformat = FORMAT_HTML;
         $category->contextid = $context->id;
