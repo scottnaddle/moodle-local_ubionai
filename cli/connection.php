@@ -39,6 +39,7 @@ require_once($CFG->libdir . '/clilib.php');
     'iprestriction' => '',
     'regcode' => '',
     'regcode-file' => '',
+    'revoke-legacy' => false,
 ], ['h' => 'help']);
 
 $actioncount = (int) !empty($options['status']) + (int) !empty($options['connect'])
@@ -63,6 +64,10 @@ if (($regcode !== '' || $regcodefile !== '') && empty($options['connect'])) {
     exit(2);
 }
 if (trim((string) $options['iprestriction']) !== '' && empty($options['connect'])) {
+    echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
+    exit(2);
+}
+if (!empty($options['revoke-legacy']) && empty($options['connect'])) {
     echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
     exit(2);
 }
@@ -122,7 +127,7 @@ try {
             echo get_string('cli_iprestriction_invalid', 'local_ubionai', $e->getMessage()) . PHP_EOL;
             exit(2);
         }
-        $result = provisioner::provision($iprestriction);
+        $result = provisioner::provision($iprestriction, !empty($options['revoke-legacy']));
         foreach ($result as $key => $value) {
             if ($key === 'skipped') {
                 $value = $value ? implode(', ', $value) : 'none';
@@ -130,6 +135,9 @@ try {
                 $value = $value ? get_string('yes') : get_string('no');
             }
             cli_writeln($key . ': ' . $value);
+        }
+        if ($result['legacy_untracked'] > 0) {
+            cli_writeln(get_string('token_legacy_kept', 'local_ubionai', $result['legacy_untracked']));
         }
         cli_writeln(hub_client::is_configured()
             ? get_string('hub_configured', 'local_ubionai')

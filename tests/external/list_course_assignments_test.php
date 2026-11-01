@@ -127,7 +127,7 @@ final class list_course_assignments_test extends \advanced_testcase {
 
         $result = list_course_assignments::execute(0, 10);
 
-        $this->assertSame(2, $result['total']);
+        $this->assertNull($result['total']);
         $this->assertSame([], $result['courses']);
         $this->assertCount(2, $result['warnings']);
         $warningids = array_map(
@@ -136,6 +136,34 @@ final class list_course_assignments_test extends \advanced_testcase {
         );
         $this->assertContains((int) $course1->id, $warningids);
         $this->assertContains((int) $course2->id, $warningids);
+    }
+
+    /**
+     * A caller without site-wide course access does not learn the site-wide total.
+     */
+    public function test_total_hidden_from_user_without_site_course_view(): void {
+        $course1 = $this->getDataGenerator()->create_course();
+        $this->getDataGenerator()->create_module('assign', ['course' => $course1->id, 'name' => 'A']);
+        $course2 = $this->getDataGenerator()->create_course();
+        $this->getDataGenerator()->create_module('assign', ['course' => $course2->id, 'name' => 'B']);
+        $course3 = $this->getDataGenerator()->create_course();
+        $this->getDataGenerator()->create_module('assign', ['course' => $course3->id, 'name' => 'C']);
+
+        $this->assertSame(3, list_course_assignments::execute(0, 10)['total']);
+
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user((int) $user->id, (int) $course2->id, 'student');
+        $this->setUser($user);
+
+        $result = list_course_assignments::execute(0, 10);
+
+        $this->assertNull($result['total']);
+        $this->assertCount(1, $result['courses']);
+        $this->assertSame((int) $course2->id, (int) $result['courses'][0]['id']);
+        $this->assertCount(2, $result['warnings']);
+
+        $cleaned = \core_external\external_api::clean_returnvalue(list_course_assignments::execute_returns(), $result);
+        $this->assertNull($cleaned['total']);
     }
 
     /**

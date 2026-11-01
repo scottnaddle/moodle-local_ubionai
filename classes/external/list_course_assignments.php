@@ -65,7 +65,12 @@ class list_course_assignments extends external_api {
         $fromwhere = "FROM {course} c
                  WHERE c.id <> :siteid
                    AND EXISTS (SELECT 1 FROM {assign} a WHERE a.course = c.id)";
-        $total = (int) $DB->count_records_sql("SELECT COUNT(1) {$fromwhere}", ['siteid' => SITEID]);
+        // The unfiltered count would reveal how many courses site-wide contain assignments, so
+        // only callers that can view every course get it; others get null (page until a short page).
+        $total = null;
+        if (has_capability('moodle/course:view', $systemcontext)) {
+            $total = (int) $DB->count_records_sql("SELECT COUNT(1) {$fromwhere}", ['siteid' => SITEID]);
+        }
 
         // Paged, stable order; c.* because build_course() needs the full record.
         $courses = $DB->get_records_sql(
@@ -109,7 +114,13 @@ class list_course_assignments extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'courses' => new external_multiple_structure(get_course_assignments::course_structure()),
-            'total' => new external_value(PARAM_INT, 'Total courses containing assignments'),
+            'total' => new external_value(
+                PARAM_INT,
+                'Total courses containing assignments; null unless the caller has moodle/course:view in the system context',
+                VALUE_REQUIRED,
+                null,
+                NULL_ALLOWED
+            ),
             'offset' => new external_value(PARAM_INT, 'Offset used'),
             'limit' => new external_value(PARAM_INT, 'Limit used'),
             'warnings' => new external_warnings(),

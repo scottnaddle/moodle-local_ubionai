@@ -74,5 +74,13 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026103105, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026103106) {
+        // 0.5.1: no data change. Connect no longer adopts untracked 'ubionai-mcp' tokens; it mints
+        // a new token for the hub instead (token_action: rotated) and leaves the legacy token in
+        // place unless --revoke-legacy is given. A token adopted by 0.5.0 stays tracked because it
+        // cannot be told apart from one this plugin minted; the README describes how to rotate it.
+        upgrade_plugin_savepoint(true, 2026103106, 'local', 'ubionai');
+    }
+
     return true;
 }
