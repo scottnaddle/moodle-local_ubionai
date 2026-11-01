@@ -199,8 +199,10 @@ The plugin can provision its own Moodle web service connection.
   *Disconnect* buttons. *Connect* enables web services and REST, creates the `svc_ubionai` service
   user, the `ubionai_service` role, the restricted `ubionai` external service with its functions,
   authorises the user and ensures exactly one usable permanent token. It reuses a valid tracked
-  token, adopts an untracked valid token named `ubionai-mcp`, and only mints a new token when
-  neither exists; the result reports `token_action: reused|adopted|created`. Token row ids managed
+  token and otherwise mints a new one; the result reports `token_action: reused|rotated|created`
+  (`rotated` = minted while an untracked valid `ubionai-mcp` token exists, for example one written
+  to a token file by the setup script). Such a token is never adopted, tracked or sent to the hub;
+  it is left in place unless `--revoke-legacy` is given. Token row ids managed
   by the plugin are tracked in the `issued_token_ids` config (ids only; the token string is never
   stored). *Disconnect*
   deletes only those tracked tokens and leaves any other token of the service user in place,
@@ -212,7 +214,7 @@ The plugin can provision its own Moodle web service connection.
 
   ```
   php local/ubionai/cli/connection.php --status
-  php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10]
+  php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10] [--revoke-legacy]
   php local/ubionai/cli/connection.php --connect --regcode-file=/path/to/code
   php local/ubionai/cli/connection.php --connect --regcode-file=-
   php local/ubionai/cli/connection.php --connect --regcode=VALUE
@@ -223,13 +225,36 @@ The plugin can provision its own Moodle web service connection.
   file is group- or world-readable. `--regcode-file=-` reads the same from stdin. `--regcode=VALUE`
   is accepted but visible in the process list and shell history. Use only one of the two options,
   and only with `--connect`. Registration failure after successful provisioning exits with code 3;
-  the registration code itself is never printed.
+  the registration code itself is never printed. `--revoke-legacy` (only with `--connect`) deletes
+  the untracked `ubionai-mcp` tokens of `svc_ubionai` on service `ubionai`, expired or not; tokens
+  with another name, user or service are never touched.
 
 The web service token is never returned by any API, printed, echoed, logged or written to plugin
 config. Only token metadata (count, `timecreated`, `lastaccess`) is observable. Moodle core itself
 stores `external_tokens.token` in plain text; that is outside this plugin's control.
 
+### Upgrading to 0.5.1
+
+No data change. Connect no longer adopts an untracked `ubionai-mcp` token: such a token's string
+already exists outside Moodle (the setup script writes it to `--token-file`), so handing it to the
+hub would put one secret in three places. Connect now mints a separate token for the hub
+(`token_action: rotated`) and leaves the legacy token in place, untracked; *Disconnect* does not
+delete it. Run `php local/ubionai/cli/connection.php --connect --revoke-legacy` once nothing else
+uses it.
+
+If 0.5.0 reported `token_action: adopted`, that token is still tracked and is the one the hub holds;
+it cannot be told apart from a token the plugin minted. To separate them, re-issue the setup
+script's token file if it is still needed, then *Disconnect*, *Connect* and register with the hub
+again (the hub administrator must first delete the existing tenant).
+
+`local_ubionai_list_course_assignments` now returns `total: null` unless the caller has
+`moodle/course:view` in the system context (the provisioned service role has it), so that a
+restricted caller does not learn how many courses site-wide contain assignments. Such callers page
+until a page returns fewer `courses` + `warnings` than `limit`.
+
 ### Upgrading to 0.5.0
+
+(Historical: token adoption described below was removed in 0.5.1.)
 
 After upgrading, click *Connect* (or run `php local/ubionai/cli/connection.php --connect`) once. No
 new token is created: an existing valid token is reused, or an existing valid token named
@@ -264,6 +289,17 @@ Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS 
 then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.5.1 (2026103106)
+
+* Security review 2026-11-01, item 4b: Connect never adopts an untracked `ubionai-mcp` token; it
+  mints a new token for the hub (`token_action: rotated`) and leaves the legacy one untracked.
+  New opt-in `--revoke-legacy` CLI flag deletes such tokens. `provision()` reports
+  `legacy_revoked` and `legacy_untracked`; `token_created` is true for `created` and `rotated`.
+* Item 4c: the Disconnect confirmation, the Connect notifications and the CLI usage now describe
+  which tokens are deleted and which are kept.
+* Item 3c: `local_ubionai_list_course_assignments` returns `total: null` to callers without
+  `moodle/course:view` in the system context.
 
 ### 0.5.0 (2026103105)
 

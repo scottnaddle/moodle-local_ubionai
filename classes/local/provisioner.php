@@ -25,6 +25,10 @@ use stdClass;
  * used only inside this class. It is never returned to callers, written to plugin config, logged
  * or echoed; only token metadata (count and timestamps) is observable.
  *
+ * Only tokens minted here are tracked and handed to the hub. A token issued elsewhere (for example
+ * the setup script's 'ubionai-mcp' token, whose string also lives in a token file) is never tracked
+ * or sent to the hub; it is left in place unless the caller opts in to revoking it.
+ *
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -102,9 +106,10 @@ class provisioner {
      * authorisation and exactly one valid token.
      *
      * @param string $iprestriction optional IP restriction applied to authorisation and token
+     * @param bool $revokelegacy delete untracked 'ubionai-mcp' tokens of the service user (opt-in)
      * @return array status array that never contains the token string
      */
-    public static function provision(string $iprestriction = ''): array {
+    public static function provision(string $iprestriction = '', bool $revokelegacy = false): array {
         global $CFG;
 
         $iprestriction = ip_validator::normalise($iprestriction);
@@ -122,6 +127,7 @@ class provisioner {
         [$total, $added, $skipped] = self::ensure_functions((int) $service->id);
         self::ensure_authorisation((int) $service->id, (int) $user->id, $iprestriction);
         $tokenaction = self::ensure_single_token((int) $service->id, (int) $user->id, $iprestriction);
+        $legacyrevoked = $revokelegacy ? self::revoke_legacy_tokens((int) $service->id, (int) $user->id) : 0;
 
         role_assign($roleid, (int) $user->id, \context_system::instance()->id);
         accesslib_clear_role_cache($roleid);
@@ -135,9 +141,11 @@ class provisioner {
             'functions_total' => (int) $total,
             'functions_added' => (int) $added,
             'skipped' => $skipped,
-            'token_created' => $tokenaction === 'created',
+            'token_created' => $tokenaction !== 'reused',
             'token_action' => $tokenaction,
             'token_count' => count(self::token_rows()),
+            'legacy_revoked' => $legacyrevoked,
+            'legacy_untracked' => count(self::legacy_token_ids((int) $service->id, (int) $user->id)),
         ];
     }
 
@@ -495,13 +503,15 @@ class provisioner {
     /**
      * Ensure exactly one usable token is tracked for the service user.
      *
-     * Order: reuse a valid tracked token; delete tracked-but-unusable rows; adopt an
-     * untracked 'ubionai-mcp' token; otherwise mint a new one.
+     * Order: reuse a valid tracked token; delete tracked-but-unusable rows; otherwise mint a new
+     * one. An untracked valid 'ubionai-mcp' token (for example from the setup script) is never
+     * adopted: its string already exists outside Moodle, so a fresh token is minted for the hub
+     * ('rotated') and the legacy row is left untracked.
      *
      * @param int $serviceid external service id
      * @param int $userid service user id
      * @param string $iprestriction optional IP restriction
-     * @return string 'reused'|'adopted'|'created'
+     * @return string 'reused'|'rotated'|'created'
      */
     private static function ensure_single_token(int $serviceid, int $userid, string $iprestriction): string {
         global $DB;
@@ -533,23 +543,10 @@ class provisioner {
             return 'reused';
         }
 
-        // Step 5: adopt an untracked token that both issuers of this integration mark as ours.
-        $adoptparams = $validparams;
-        $adoptparams['adoptname'] = self::TOKEN_NAME;
-        $row = $DB->get_record_sql(
-            "SELECT id FROM {external_tokens} WHERE {$validsql} AND name = :adoptname"
-                . ' ORDER BY timecreated DESC, id DESC',
-            $adoptparams,
-            IGNORE_MULTIPLE
-        );
-        if ($row) {
-            $adoptedid = (int) $row->id;
-            self::set_tracked_token_ids([$adoptedid]);
-            if ($iprestriction !== '') {
-                $DB->set_field('external_tokens', 'iprestriction', $iprestriction, ['id' => $adoptedid]);
-            }
-            return 'adopted';
-        }
+        // Step 5: a valid untracked 'ubionai-mcp' token means rotation, not adoption.
+        $legacyparams = $validparams;
+        $legacyparams['legacyname'] = self::TOKEN_NAME;
+        $rotated = $DB->record_exists_select('external_tokens', "{$validsql} AND name = :legacyname", $legacyparams);
 
         // Step 6: mint.
         $token = \core_external\util::generate_token(
@@ -568,7 +565,52 @@ class provisioner {
         }
         self::set_tracked_token_ids([$newid]);
 
-        return 'created';
+        return $rotated ? 'rotated' : 'created';
+    }
+
+    /**
+     * Ids of untracked 'ubionai-mcp' tokens of the service user on our service (any validity).
+     *
+     * @param int $serviceid external service id
+     * @param int $userid service user id
+     * @return int[]
+     */
+    private static function legacy_token_ids(int $serviceid, int $userid): array {
+        global $DB;
+
+        $select = 'externalserviceid = :serviceid AND userid = :userid AND name = :name';
+        $params = ['serviceid' => $serviceid, 'userid' => $userid, 'name' => self::TOKEN_NAME];
+        $tracked = self::tracked_token_ids();
+        if ($tracked) {
+            [$insql, $inparams] = $DB->get_in_or_equal($tracked, SQL_PARAMS_NAMED, 'tk', false);
+            $select .= " AND id {$insql}";
+            $params += $inparams;
+        }
+
+        $rows = $DB->get_records_select('external_tokens', $select, $params, 'id', 'id');
+
+        return array_map('intval', array_keys($rows));
+    }
+
+    /**
+     * Delete untracked 'ubionai-mcp' tokens of the service user on our service.
+     *
+     * Opt-in only: such a token may still be used by another client (for example a single-tenant
+     * MCP server configured by the setup script).
+     *
+     * @param int $serviceid external service id
+     * @param int $userid service user id
+     * @return int number of deleted rows
+     */
+    private static function revoke_legacy_tokens(int $serviceid, int $userid): int {
+        global $DB;
+
+        $ids = self::legacy_token_ids($serviceid, $userid);
+        if ($ids) {
+            $DB->delete_records_list('external_tokens', 'id', $ids);
+        }
+
+        return count($ids);
     }
 
     /**

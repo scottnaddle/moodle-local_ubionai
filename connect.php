@@ -51,8 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         $message = get_string('connect_success', 'local_ubionai');
         if ($tokenaction === 'reused') {
             $message = get_string('connect_success_reused', 'local_ubionai');
-        } else if ($tokenaction === 'adopted') {
-            $message = get_string('connect_success_adopted', 'local_ubionai');
+        } else if ($tokenaction === 'rotated') {
+            $message = get_string('connect_success_rotated', 'local_ubionai');
         }
         $type = notification::NOTIFY_SUCCESS;
 
@@ -87,8 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         ]);
         $event->trigger();
 
-        if ($result['token_action'] === 'adopted') {
-            \core\notification::add(get_string('token_adopted', 'local_ubionai'), \core\notification::INFO);
+        if ($result['legacy_untracked'] > 0) {
+            \core\notification::add(
+                get_string('token_legacy_kept', 'local_ubionai', $result['legacy_untracked']),
+                \core\notification::INFO
+            );
         }
 
         redirect($pageurl, $message, null, $type);

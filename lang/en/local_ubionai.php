@@ -71,11 +71,11 @@ $string['connect_warning'] = 'Connecting creates a service user with a manager-a
 $string['regcode'] = 'Registration code';
 $string['regcode_help'] = 'The one-time registration code issued by the hub administrator. The code is used once during registration and is never stored or logged. Leave empty to provision the local web service without registering with the hub.';
 $string['disconnect'] = 'Disconnect';
-$string['disconnectconfirm'] = 'This deletes only the web service token(s) issued by this plugin for the UBION AI service user. Tokens not issued by this plugin are kept. The user, role and service are kept. Continue?';
+$string['disconnectconfirm'] = 'This deletes the web service token(s) tracked by this plugin for the UBION AI service user: the token(s) it issued, and a token adopted by plugin version 0.5.0 if there is one. Other tokens, including a \'ubionai-mcp\' token created by the setup script, are kept. The user, role and service are kept. Continue?';
 $string['connect_success'] = 'Connection provisioned successfully. Web service token issued for the UBION AI service user.';
 $string['connect_success_reused'] = 'Connection provisioned successfully. The existing web service token for the UBION AI service user was reused.';
-$string['connect_success_adopted'] = 'Connection provisioned successfully. An existing UBION AI token was adopted and is now managed by this plugin.';
-$string['token_adopted'] = 'An existing UBION AI token (name ubionai-mcp) was found and is now managed by this plugin; disconnect will revoke it.';
+$string['connect_success_rotated'] = 'Connection provisioned successfully. An existing \'ubionai-mcp\' token not issued by this plugin was found; it was not reused. A new web service token was issued for the hub instead.';
+$string['token_legacy_kept'] = '{$a} \'ubionai-mcp\' token(s) not issued by this plugin (for example by the setup script) were left in place. They are never sent to the hub and Disconnect does not delete them. Once nothing else uses them, revoke them with: php local/ubionai/cli/connection.php --connect --revoke-legacy';
 $string['connect_success_nohub'] = 'Provisioned locally; no hub URL is configured, so the site was not registered with a hub.';
 $string['connect_hub_needcode'] = 'The hub is configured but the site is not registered yet. Enter the one-time registration code from the hub administrator and connect again.';
 $string['hub_status_registered'] = 'The site was registered with the hub.';
@@ -108,7 +108,7 @@ $string['cli_iprestriction_invalid'] = 'Invalid --iprestriction value: {$a}';
 $string['cli_regcode_perms_warning'] = 'Warning: the registration code file is group- or world-readable. Restrict it to the Moodle process user (for example chmod 600).';
 $string['cli_usage'] = 'Usage:
     php local/ubionai/cli/connection.php --status
-    php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10] [--regcode-file=PATH]
+    php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10] [--regcode-file=PATH] [--revoke-legacy]
     php local/ubionai/cli/connection.php --connect [--iprestriction=203.0.113.10] --regcode-file=-
     php local/ubionai/cli/connection.php --connect [--regcode=VALUE]
     php local/ubionai/cli/connection.php --disconnect
@@ -117,7 +117,10 @@ $string['cli_usage'] = 'Usage:
 --regcode=VALUE is supported but visible in the process list and shell history.
 --iprestriction=LIST is a comma-separated list of IP addresses or CIDR networks (IPv4/IPv6).
   Entries are normalised; invalid values exit with code 2. It requires --connect.
+--revoke-legacy deletes \'ubionai-mcp\' tokens of the service user that this plugin did not
+  issue (for example from the setup script). It requires --connect.
 
-Connect is idempotent: an existing valid token is reused, a token named
-\'ubionai-mcp\' is adopted, otherwise one is created. The result reports
-token_action: reused|adopted|created.';
+Connect is idempotent: a valid token issued by this plugin is reused, otherwise a new one is
+created. An existing \'ubionai-mcp\' token not issued by this plugin is never reused or sent to
+the hub; it is left in place unless --revoke-legacy is given. The result reports
+token_action: reused|rotated|created (rotated = created while such a token exists).';
