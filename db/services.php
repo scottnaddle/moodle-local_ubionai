@@ -95,3 +95,31 @@ $functions = [
         'capabilities' => 'moodle/course:view, mod/assign:view',
     ],
 ];
+
+// Phase 0 spike: per-user service declared by the component. Core creates and syncs it on every
+// install/upgrade (external_update_descriptions), after db/install.php has run. Teacher tokens are
+// minted for this service only; the function list is the whitelist.
+$services = [
+    'UBION AI (per-user)' => [
+        'shortname' => 'ubionai_user',
+        'functions' => [
+            'core_webservice_get_site_info',
+            'core_enrol_get_users_courses',
+            'core_course_get_courses_by_field',
+            'core_course_get_contents',
+            'core_enrol_get_enrolled_users',
+            'mod_assign_get_assignments',
+            'mod_assign_get_submissions',
+            'mod_assign_get_grades',
+            'mod_assign_save_grade',
+            'local_ubionai_create_module',
+            'local_ubionai_update_module',
+            'local_ubionai_get_course_assignments',
+            'local_ubionai_list_course_assignments',
+        ],
+        'restrictedusers' => 1,
+        'enabled' => 1,
+        'downloadfiles' => 0,
+        'uploadfiles' => 0,
+    ],
+];

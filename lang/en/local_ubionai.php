@@ -124,3 +124,9 @@ Connect is idempotent: a valid token issued by this plugin is reused, otherwise 
 created. An existing \'ubionai-mcp\' token not issued by this plugin is never reused or sent to
 the hub; it is left in place unless --revoke-legacy is given. The result reports
 token_action: reused|rotated|created (rotated = created while such a token exists).';
+
+// Phase 0 spike: post-install consent screen.
+$string['consent'] = 'Connect this site to UBION AI (Claude connector)';
+$string['consent_desc'] = 'Saving "Agree and connect" sends this site\'s URL, name and version to the UBION AI hub, turns on web services and the REST protocol, and lets teachers connect Claude with their own Moodle login. Course and student data are then processed by the hub and by Anthropic (Claude). Choose "Not now" to stop this prompt; you can connect later from Site administration > Plugins > Local plugins.';
+$string['consent_accepted'] = 'Agree and connect';
+$string['consent_declined'] = 'Not now';

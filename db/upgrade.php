@@ -82,5 +82,12 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026103106, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026110100) {
+        // 0.6.0 (Phase 0 spike): same zero-config defaults as a fresh install. The declared
+        // service ubionai_user is created by core after this hook (upgrade_component_updated).
+        \local_ubionai\local\setup::ensure_defaults('upgrade');
+        upgrade_plugin_savepoint(true, 2026110100, 'local', 'ubionai');
+    }
+
     return true;
 }
