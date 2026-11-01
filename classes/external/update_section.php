@@ -39,10 +39,20 @@ class update_section extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id'),
             'section' => new external_value(PARAM_INT, 'Section number (not id)'),
-            'name' => new external_value(PARAM_TEXT, 'New section name; null = unchanged, "" = default name',
-                VALUE_DEFAULT, null, NULL_ALLOWED),
-            'summary' => new external_value(PARAM_RAW, 'New summary (HTML); null = unchanged',
-                VALUE_DEFAULT, null, NULL_ALLOWED),
+            'name' => new external_value(
+                PARAM_TEXT,
+                'New section name; null = unchanged, "" = default name',
+                VALUE_DEFAULT,
+                null,
+                NULL_ALLOWED
+            ),
+            'summary' => new external_value(
+                PARAM_RAW,
+                'New summary (HTML); null = unchanged',
+                VALUE_DEFAULT,
+                null,
+                NULL_ALLOWED
+            ),
         ]);
     }
 

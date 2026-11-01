@@ -85,8 +85,10 @@ if ($regcode !== '') {
         $raw = stream_get_contents(STDIN, 1024);
     } else {
         $stat = @stat($regcodefile);
-        if ($stat === false || (($stat['mode'] & 0170000) !== 0100000)
-                || !is_readable($regcodefile)) {
+        if (
+            $stat === false || (($stat['mode'] & 0170000) !== 0100000)
+                || !is_readable($regcodefile)
+        ) {
             echo get_string('cli_usage', 'local_ubionai') . PHP_EOL;
             exit(2);
         }
@@ -114,8 +116,10 @@ try {
                 $value = $value ? get_string('yes') : get_string('no');
             } else if ($value === null) {
                 $value = '-';
-            } else if ($key === 'token_timecreated' || $key === 'token_lastaccess'
-                    || $key === 'connected_at' || $key === 'hub_registered_at') {
+            } else if (
+                $key === 'token_timecreated' || $key === 'token_lastaccess'
+                    || $key === 'connected_at' || $key === 'hub_registered_at'
+            ) {
                 $value = userdate((int) $value);
             }
             cli_writeln($key . ': ' . $value);

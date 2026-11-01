@@ -84,8 +84,13 @@ class set_section_availability extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'sectionid' => new external_value(PARAM_INT, 'Section id'),
-            'availability' => new external_value(PARAM_RAW, 'Stored availability JSON, null when unrestricted',
-                VALUE_REQUIRED, null, NULL_ALLOWED),
+            'availability' => new external_value(
+                PARAM_RAW,
+                'Stored availability JSON, null when unrestricted',
+                VALUE_REQUIRED,
+                null,
+                NULL_ALLOWED
+            ),
         ]);
     }
 }

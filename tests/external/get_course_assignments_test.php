@@ -55,8 +55,12 @@ final class get_course_assignments_test extends \advanced_testcase {
             'grade' => 100,
             'duedate' => 1700000000,
         ]);
-        $cm = $DB->get_record('course_modules',
-            ['instance' => $assign->id, 'course' => $course->id], '*', MUST_EXIST);
+        $cm = $DB->get_record(
+            'course_modules',
+            ['instance' => $assign->id, 'course' => $course->id],
+            '*',
+            MUST_EXIST
+        );
 
         $result = get_course_assignments::execute((int) $course->id);
 
@@ -185,8 +189,13 @@ final class get_course_assignments_test extends \advanced_testcase {
         $user = $this->getDataGenerator()->create_user();
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'ubionai_viewonly']);
         set_role_contextlevels($roleid, [CONTEXT_SYSTEM]);
-        assign_capability('moodle/course:view', CAP_ALLOW, $roleid,
-            \context_system::instance()->id, true);
+        assign_capability(
+            'moodle/course:view',
+            CAP_ALLOW,
+            $roleid,
+            \context_system::instance()->id,
+            true
+        );
         role_assign($roleid, (int) $user->id, \context_system::instance()->id);
 
         $this->setUser($user);

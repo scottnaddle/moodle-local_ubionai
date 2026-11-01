@@ -50,11 +50,17 @@ class set_rubric extends external_api {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id'),
             'name' => new external_value(PARAM_TEXT, 'Rubric name'),
-            'criteria' => new external_value(PARAM_RAW,
-                'JSON array: [{"description": "...", "levels": [{"definition": "...", "score": 0}]}]'),
+            'criteria' => new external_value(
+                PARAM_RAW,
+                'JSON array: [{"description": "...", "levels": [{"definition": "...", "score": 0}]}]'
+            ),
             'description' => new external_value(PARAM_RAW, 'Rubric description (HTML)', VALUE_DEFAULT, ''),
-            'areaname' => new external_value(PARAM_AREA, 'Grading area (ignored for workshops)', VALUE_DEFAULT,
-                'submissions'),
+            'areaname' => new external_value(
+                PARAM_AREA,
+                'Grading area (ignored for workshops)',
+                VALUE_DEFAULT,
+                'submissions'
+            ),
         ]);
     }
 
@@ -68,8 +74,13 @@ class set_rubric extends external_api {
      * @param string $areaname grading area
      * @return array
      */
-    public static function execute(int $cmid, string $name, string $criteria, string $description = '',
-            string $areaname = 'submissions'): array {
+    public static function execute(
+        int $cmid,
+        string $name,
+        string $criteria,
+        string $description = '',
+        string $areaname = 'submissions'
+    ): array {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/grade/grading/lib.php');
 
@@ -102,7 +113,8 @@ class set_rubric extends external_api {
         if (!array_key_exists($params['areaname'], $areas)) {
             $known = $areas ? implode(', ', array_keys($areas)) : 'none';
             throw new invalid_parameter_exception(
-                "Activity {$cm->id} ({$cm->modname}) has no grading area '{$params['areaname']}' (available: {$known})");
+                "Activity {$cm->id} ({$cm->modname}) has no grading area '{$params['areaname']}' (available: {$known})"
+            );
         }
         if (!array_key_exists('rubric', $manager->get_available_methods(false))) {
             throw new invalid_parameter_exception('The rubric grading method (gradingform_rubric) is not available');
@@ -172,14 +184,16 @@ class set_rubric extends external_api {
         $record = $DB->get_record('workshop', ['id' => $cm->instance], '*', MUST_EXIST);
         if ($record->strategy !== 'rubric') {
             throw new invalid_parameter_exception(
-                "Workshop {$cm->id} uses the '{$record->strategy}' grading strategy; set strategy to 'rubric' first");
+                "Workshop {$cm->id} uses the '{$record->strategy}' grading strategy; set strategy to 'rubric' first"
+            );
         }
         $assessed = $DB->record_exists_sql(
             "SELECT 1
                FROM {workshop_assessments} a
                JOIN {workshop_submissions} s ON s.id = a.submissionid
               WHERE s.workshopid = :workshopid AND a.grade IS NOT NULL",
-            ['workshopid' => $record->id]);
+            ['workshopid' => $record->id]
+        );
         if ($assessed) {
             throw new invalid_parameter_exception('This workshop already has assessments; edit its form in Moodle');
         }
@@ -283,7 +297,8 @@ class set_rubric extends external_api {
                 $score = (float) $score;
                 if ($workshop && ($score != (int) $score || $score > 100)) {
                     throw new invalid_parameter_exception(
-                        "{$where}.levels[{$j}].score must be a whole number between 0 and 100 for a workshop");
+                        "{$where}.levels[{$j}].score must be a whole number between 0 and 100 for a workshop"
+                    );
                 }
                 $parsedlevels[] = [$definition, $score];
             }
