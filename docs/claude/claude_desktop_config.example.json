@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "moodle": {
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "[ -r \"$MCP_TOKEN_FILE\" ] || { echo \"token file not readable: $MCP_TOKEN_FILE\" >&2; exit 1; }; AUTH_HEADER=\"Bearer $(tr -d '\\r\\n' < \"$MCP_TOKEN_FILE\")\"; export AUTH_HEADER; exec \"$NPX\" -y \"mcp-remote@$MCP_REMOTE_VERSION\" \"$MCP_URL\" --transport http-only --header 'Authorization:${AUTH_HEADER}'"
+      ],
+      "env": {
+        "MCP_URL": "<MCP_ENDPOINT_URL>",
+        "MCP_TOKEN_FILE": "<ABSOLUTE_PATH_TO_TOKEN_FILE>",
+        "MCP_REMOTE_VERSION": "<MCP_REMOTE_VERSION>",
+        "NPX": "<ABSOLUTE_PATH_TO_NPX>"
+      }
+    }
+  }
+}
