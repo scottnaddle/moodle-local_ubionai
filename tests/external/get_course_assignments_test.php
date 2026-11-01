@@ -16,9 +16,10 @@
 
 namespace local_ubionai\external;
 
-defined('MOODLE_INTERNAL') || die();
-
 use local_ubionai\local\provisioner;
+use PHPUnit\Framework\Attributes\CoversClass;
+
+defined('MOODLE_INTERNAL') || die();
 
 /**
  * Tests for local_ubionai_get_course_assignments.
@@ -26,8 +27,8 @@ use local_ubionai\local\provisioner;
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_ubionai\external\get_course_assignments
  */
+#[CoversClass(\local_ubionai\external\get_course_assignments::class)]
 final class get_course_assignments_test extends \advanced_testcase {
     /**
      * Reset state before each test.

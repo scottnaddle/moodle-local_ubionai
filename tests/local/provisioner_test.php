@@ -16,6 +16,8 @@
 
 namespace local_ubionai\local;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -24,8 +26,8 @@ defined('MOODLE_INTERNAL') || die();
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_ubionai\local\provisioner
  */
+#[CoversClass(\local_ubionai\local\provisioner::class)]
 final class provisioner_test extends \advanced_testcase {
     /**
      * Reset state before each test.
