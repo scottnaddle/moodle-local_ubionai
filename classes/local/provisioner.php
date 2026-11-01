@@ -333,7 +333,7 @@ class provisioner {
             'password' => random_string(24) . 'Aa1!',
             'policyagreed' => 1,
         ];
-        $userid = user_create_user($record, true, false);
+        $userid = \core\user::create_user($record, true, false);
 
         return $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     }
