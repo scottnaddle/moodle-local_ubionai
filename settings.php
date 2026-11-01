@@ -64,6 +64,20 @@ if ($hassiteconfig) {
         get_string('hub_url', 'local_ubionai'),
         get_string('hub_url_desc', 'local_ubionai'),
         '', PARAM_URL));
+    // Easy Connect spike 2: per-user OAuth through the hub. Both values come from the hub operator.
+    $page->add(new admin_setting_configtext(
+        'local_ubionai/hub_site_id',
+        get_string('hub_site_id', 'local_ubionai'),
+        get_string('hub_site_id_desc', 'local_ubionai'),
+        '',
+        '/^([a-z0-9][a-z0-9-]{1,62})?$/'
+    ));
+    $page->add(new admin_setting_configpasswordunmask(
+        'local_ubionai/oauth_secret',
+        get_string('oauth_secret', 'local_ubionai'),
+        get_string('oauth_secret_desc', 'local_ubionai'),
+        ''
+    ));
     $ADMIN->add('localplugins', $page);
 
     $ADMIN->add('localplugins', new admin_externalpage('local_ubionai_connection',

@@ -275,6 +275,31 @@ Values are trimmed, canonicalised and deduplicated before being stored (maximum 
 invalid values, host bits in a CIDR, zone ids and hostnames exit with code 2. The value requires
 `--connect`.
 
+## Teacher OAuth connections (Easy Connect spike, hub-staging trial)
+
+Teachers connect Claude with their own Moodle login; the hub then calls Moodle with a token of that
+teacher, limited to the `ubionai_user` service. Endpoints:
+
+| Path | Who | What |
+|---|---|---|
+| `oauth/authorize.php?req=…` | teacher's browser | verifies the hub's signed request, `require_login`, refuses site administrators and users without `local/ubionai:connect` in any course (editing and non-editing teachers by default), shows a consent page (user, site, client, hub, scope), then redirects to `{hub_url}/t/{hub_site_id}/oauth/callback?code=…&state=…` (one-time code, 2 minutes) or `?error=access_denied` |
+| `oauth/exchange.php` (POST `assertion`) | hub back channel | verifies the signed assertion, consumes the code, assigns the role `ubionai_wsuser` (only `webservice/rest:use`) at system level, authorises the user on `ubionai_user` and mints a token (30 days, name `ubionai-user`); returns `{userid, tokenid, wstoken, validuntil}` |
+| `oauth/revoke.php` (POST `assertion`) | hub back channel | deletes one `ubionai_user` token of that user |
+| `connections.php` | the user (profile > Claude connections) | lists the user's `ubionai_user` tokens, revoke |
+
+Tokens are only ever minted or revoked for the `ubionai_user` service (`moodle_mobile_app` and other
+services are refused in code) and never for site administrators. When a user's last connection is
+revoked, the service authorisation and the role are removed.
+
+Settings (all three required; values come from the hub operator):
+
+- `local_ubionai/hub_url` — hub public URL, e.g. `https://hub-staging.ubion.global`
+- `local_ubionai/hub_site_id` — the `<site>` of `https://hub/t/<site>/mcp`
+- `local_ubionai/oauth_secret` — shared secret, the same value as the hub file
+  `secrets/tenants/<site>/oauth.secret` (at least 32 characters). Messages are
+  `base64url(json) . "." . base64url(HMAC-SHA256(secret, "ubionai-oauth-v1." . body))` with claims
+  `typ`, `aud` (= `$CFG->wwwroot`), `site` and `exp`.
+
 ## Privacy
 
 The plugin itself stores no personal data in Moodle and has no database tables or user preferences.

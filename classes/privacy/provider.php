@@ -49,6 +49,11 @@ class provider implements
             'coursecontent' => 'privacy:metadata:ubionai_hub:coursecontent',
             'prompts' => 'privacy:metadata:ubionai_hub:prompts',
         ], 'privacy:metadata:ubionai_hub');
+        // Ephemeral: a code lives at most two minutes and is deleted when the hub redeems it.
+        $collection->add_database_table('local_ubionai_codes', [
+            'userid' => 'privacy:metadata:local_ubionai_codes:userid',
+            'timecreated' => 'privacy:metadata:local_ubionai_codes:timecreated',
+        ], 'privacy:metadata:local_ubionai_codes');
 
         return $collection;
     }

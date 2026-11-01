@@ -89,5 +89,24 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026110100, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026110200) {
+        // Easy Connect spike 2: one-time codes for the hub's delegated OAuth login.
+        $dbman = $DB->get_manager();
+        $table = new xmldb_table('local_ubionai_codes');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('codehash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('state', XMLDB_TYPE_CHAR, '128', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timeexpires', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('userid', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        $table->add_index('codehash', XMLDB_INDEX_UNIQUE, ['codehash']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        upgrade_plugin_savepoint(true, 2026110200, 'local', 'ubionai');
+    }
+
     return true;
 }
