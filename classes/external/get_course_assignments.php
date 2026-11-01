@@ -57,7 +57,8 @@ class get_course_assignments extends external_api {
         $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
         $context = \context_course::instance($course->id);
         self::validate_context($context);
-        require_capability('moodle/course:view', $context);
+        // validate_context() already enforces course access; gate on the module
+        // capability so enrolled students (not only managers) can use this.
         require_capability('mod/assign:view', $context);
 
         return [
@@ -111,7 +112,8 @@ class get_course_assignments extends external_api {
                         default => 'none',
                     };
                     $grademax = (float) $gradeitem->grademax;
-                    $scaleid = $gradeitem->scaleid === null ? null : (int) $gradeitem->scaleid;
+                    // scaleid is nullable since Moodle 5.3; 0 means "no scale" for point grades.
+                    $scaleid = (int) $gradeitem->scaleid;
                     $gradepass = (float) $gradeitem->gradepass;
                 }
 

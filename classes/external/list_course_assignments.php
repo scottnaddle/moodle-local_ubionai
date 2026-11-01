@@ -78,13 +78,12 @@ class list_course_assignments extends external_api {
         $out = [];
         foreach ($validcourses as $course) {
             $context = \context_course::instance((int) $course->id);
-            if (!has_capability('moodle/course:view', $context)
-                    || !has_capability('mod/assign:view', $context)) {
+            if (!has_capability('mod/assign:view', $context)) {
                 $warnings[] = [
                     'item' => 'course',
                     'itemid' => (int) $course->id,
                     'warningcode' => 'nopermission',
-                    'message' => 'Missing moodle/course:view or mod/assign:view',
+                    'message' => 'Missing mod/assign:view',
                 ];
                 continue;
             }
