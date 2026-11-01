@@ -59,10 +59,16 @@ class set_grade_categories extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id'),
-            'categories' => new external_value(PARAM_RAW,
-                'JSON array: [{"name": "...", "weight": 25, "cmids": [12, {"cmid": 13, "itemnumber": 1}]}]'),
-            'aggregation' => new external_value(PARAM_ALPHAEXT, 'weighted_mean, natural or mean', VALUE_DEFAULT,
-                'weighted_mean'),
+            'categories' => new external_value(
+                PARAM_RAW,
+                'JSON array: [{"name": "...", "weight": 25, "cmids": [12, {"cmid": 13, "itemnumber": 1}]}]'
+            ),
+            'aggregation' => new external_value(
+                PARAM_ALPHAEXT,
+                'weighted_mean, natural or mean',
+                VALUE_DEFAULT,
+                'weighted_mean'
+            ),
         ]);
     }
 
@@ -104,7 +110,8 @@ class set_grade_categories extends external_api {
                 foreach (self::resolve_grade_items($modinfo, $course->id, $cmid, $itemnumber, $index) as $item) {
                     if (isset($seen[$item->id])) {
                         throw new invalid_parameter_exception(
-                            "Grade item {$item->id} (cmid {$cmid}) is listed in more than one category");
+                            "Grade item {$item->id} (cmid {$cmid}) is listed in more than one category"
+                        );
                     }
                     $seen[$item->id] = true;
                     $spec['items'][] = $item;
@@ -172,9 +179,11 @@ class set_grade_categories extends external_api {
         $transaction->allow_commit();
 
         // Grade items that still sit directly in the course category also take part in its aggregation.
-        $uncategorised = $DB->count_records_select('grade_items',
+        $uncategorised = $DB->count_records_select(
+            'grade_items',
             "courseid = :courseid AND categoryid = :categoryid AND itemtype <> 'course' AND itemtype <> 'category'",
-            ['courseid' => $course->id, 'categoryid' => $coursecategory->id]);
+            ['courseid' => $course->id, 'categoryid' => $coursecategory->id]
+        );
 
         return [
             'coursecategoryid' => (int) $coursecategory->id,
@@ -235,12 +244,15 @@ class set_grade_categories extends external_api {
             foreach ($cmids as $j => $ref) {
                 if (is_int($ref) && $ref > 0) {
                     $refs[] = [$ref, null];
-                } else if (is_array($ref) && is_int($ref['cmid'] ?? null) && $ref['cmid'] > 0
-                        && is_int($ref['itemnumber'] ?? null) && $ref['itemnumber'] >= 0) {
+                } else if (
+                    is_array($ref) && is_int($ref['cmid'] ?? null) && $ref['cmid'] > 0
+                        && is_int($ref['itemnumber'] ?? null) && $ref['itemnumber'] >= 0
+                ) {
                     $refs[] = [$ref['cmid'], $ref['itemnumber']];
                 } else {
                     throw new invalid_parameter_exception(
-                        "{$where}.cmids[{$j}] must be a cmid or {\"cmid\": int, \"itemnumber\": int}");
+                        "{$where}.cmids[{$j}] must be a cmid or {\"cmid\": int, \"itemnumber\": int}"
+                    );
                 }
             }
             $specs[] = ['name' => $name, 'weight' => $weight, 'refs' => $refs];
@@ -259,8 +271,13 @@ class set_grade_categories extends external_api {
      * @return \grade_item[]
      * @throws invalid_parameter_exception
      */
-    private static function resolve_grade_items(\course_modinfo $modinfo, int $courseid, int $cmid, ?int $itemnumber,
-            int $index): array {
+    private static function resolve_grade_items(
+        \course_modinfo $modinfo,
+        int $courseid,
+        int $cmid,
+        ?int $itemnumber,
+        int $index
+    ): array {
         $cm = $modinfo->get_cms()[$cmid] ?? null;
         if (!$cm) {
             throw new invalid_parameter_exception("categories[{$index}]: cmid {$cmid} is not an activity of this course");
@@ -308,13 +325,20 @@ class set_grade_categories extends external_api {
                 'name' => new external_value(PARAM_TEXT, 'Category name'),
                 'categoryid' => new external_value(PARAM_INT, 'Grade category id'),
                 'gradeitemid' => new external_value(PARAM_INT, 'Grade item id of the category total'),
-                'weight' => new external_value(PARAM_FLOAT, 'Weight set on the category', VALUE_REQUIRED, null,
-                    NULL_ALLOWED),
+                'weight' => new external_value(
+                    PARAM_FLOAT,
+                    'Weight set on the category',
+                    VALUE_REQUIRED,
+                    null,
+                    NULL_ALLOWED
+                ),
                 'created' => new external_value(PARAM_BOOL, 'Whether the category was created by this call'),
                 'itemids' => new external_multiple_structure(new external_value(PARAM_INT, 'Grade item id moved in')),
             ])),
-            'uncategorised' => new external_value(PARAM_INT,
-                'Activity grade items still directly in the course category (they count in its aggregation too)'),
+            'uncategorised' => new external_value(
+                PARAM_INT,
+                'Activity grade items still directly in the course category (they count in its aggregation too)'
+            ),
         ]);
     }
 }

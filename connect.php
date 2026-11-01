@@ -63,8 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
 
             $egressip = (string) get_config('local_ubionai', 'hub_egress_ip');
             if ($registration['ok'] && $egressip !== '') {
-                \core\notification::add(get_string('hub_egress_hint', 'local_ubionai', $egressip),
-                    \core\notification::INFO);
+                \core\notification::add(
+                    get_string('hub_egress_hint', 'local_ubionai', $egressip),
+                    \core\notification::INFO
+                );
             }
         } else if ($hubconfigured) {
             if (!hub_client::is_registered()) {
@@ -114,17 +116,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         $event->trigger();
 
         if (hub_client::is_configured()) {
-            \core\notification::add(get_string('disconnect_hub_note', 'local_ubionai'),
-                \core\notification::INFO);
+            \core\notification::add(
+                get_string('disconnect_hub_note', 'local_ubionai'),
+                \core\notification::INFO
+            );
         }
         if ($result['untracked'] > 0) {
             \core\notification::add(
                 get_string('disconnect_untracked_warning', 'local_ubionai', $result['untracked']),
-                \core\notification::WARNING);
+                \core\notification::WARNING
+            );
         }
 
-        redirect($pageurl, get_string('disconnect_success', 'local_ubionai', $result['deleted']), null,
-            notification::NOTIFY_SUCCESS);
+        redirect(
+            $pageurl,
+            get_string('disconnect_success', 'local_ubionai', $result['deleted']),
+            null,
+            notification::NOTIFY_SUCCESS
+        );
     }
 
     redirect($pageurl, get_string('invalidaction'), null, notification::NOTIFY_WARNING);
@@ -144,20 +153,27 @@ $PAGE->set_heading(get_string('connection', 'local_ubionai'));
 echo $OUTPUT->header();
 
 if ($status['token_count'] > 0 && !$status['hub_configured']) {
-    echo $OUTPUT->notification(get_string('token_warning_unused', 'local_ubionai'),
-        notification::NOTIFY_WARNING);
+    echo $OUTPUT->notification(
+        get_string('token_warning_unused', 'local_ubionai'),
+        notification::NOTIFY_WARNING
+    );
 }
 if ($status['tokens_untracked'] > 0) {
     echo $OUTPUT->notification(
         get_string('status_untracked_tokens', 'local_ubionai', $status['tokens_untracked']),
-        notification::NOTIFY_WARNING);
+        notification::NOTIFY_WARNING
+    );
 }
 if (!$status['hub_configured']) {
-    echo $OUTPUT->notification(get_string('hub_notconfigured', 'local_ubionai'),
-        notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(
+        get_string('hub_notconfigured', 'local_ubionai'),
+        notification::NOTIFY_INFO
+    );
 }
-echo $OUTPUT->notification(get_string('connect_warning', 'local_ubionai'),
-    notification::NOTIFY_WARNING);
+echo $OUTPUT->notification(
+    get_string('connect_warning', 'local_ubionai'),
+    notification::NOTIFY_WARNING
+);
 
 $table = new html_table();
 $table->attributes['class'] = 'generaltable';
@@ -181,7 +197,9 @@ $table->data = [
     [get_string('status_tokenvalid', 'local_ubionai'),
         $status['token_valid'] ? get_string('yes') : get_string('no')],
     [get_string('status_tokencreated', 'local_ubionai'),
-        $status['token_timecreated'] !== null ? userdate($status['token_timecreated']) : get_string('status_never', 'local_ubionai')],
+        $status['token_timecreated'] !== null
+            ? userdate($status['token_timecreated'])
+            : get_string('status_never', 'local_ubionai')],
     [get_string('status_tokenlastaccess', 'local_ubionai'),
         $status['token_lastaccess'] !== null ? userdate($status['token_lastaccess']) : get_string('status_never', 'local_ubionai')],
     [get_string('hub_configured', 'local_ubionai'),

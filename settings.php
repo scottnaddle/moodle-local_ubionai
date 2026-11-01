@@ -47,14 +47,19 @@ if ($hassiteconfig) {
     }
 
     $page = new admin_settingpage('local_ubionai', get_string('connection', 'local_ubionai'));
-    $page->add(new local_ubionai_admin_setting_hub_url('local_ubionai/hub_url',
+    $page->add(new local_ubionai_admin_setting_hub_url(
+        'local_ubionai/hub_url',
         get_string('hub_url', 'local_ubionai'),
         get_string('hub_url_desc', 'local_ubionai'),
-        '', PARAM_URL));
+        '',
+        PARAM_URL
+    ));
     $ADMIN->add('localplugins', $page);
 
-    $ADMIN->add('localplugins', new admin_externalpage('local_ubionai_connection',
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_ubionai_connection',
         get_string('connectionpage', 'local_ubionai'),
         new moodle_url('/local/ubionai/connect.php'),
-        'local/ubionai:manageconnection'));
+        'local/ubionai:manageconnection'
+    ));
 }

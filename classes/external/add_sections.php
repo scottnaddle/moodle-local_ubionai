@@ -48,7 +48,9 @@ class add_sections extends external_api {
             ),
             'summaries' => new external_multiple_structure(
                 new external_value(PARAM_RAW, 'Section summary (HTML), matched to names by position'),
-                'Optional summaries', VALUE_DEFAULT, []
+                'Optional summaries',
+                VALUE_DEFAULT,
+                []
             ),
         ]);
     }
