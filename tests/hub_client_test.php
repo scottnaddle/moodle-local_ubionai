@@ -16,10 +16,11 @@
 
 namespace local_ubionai;
 
-defined('MOODLE_INTERNAL') || die();
-
 use local_ubionai\local\hub_client;
 use local_ubionai\local\provisioner;
+use PHPUnit\Framework\Attributes\CoversClass;
+
+defined('MOODLE_INTERNAL') || die();
 
 /**
  * Tests for the hub registration client.
@@ -27,8 +28,8 @@ use local_ubionai\local\provisioner;
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_ubionai\local\hub_client
  */
+#[CoversClass(\local_ubionai\local\hub_client::class)]
 final class hub_client_test extends \advanced_testcase {
     /** @var string A syntactically valid registration code. */
     private const CODE = 'ABCDEFGHIJKLMNOPQRSTUVWX';

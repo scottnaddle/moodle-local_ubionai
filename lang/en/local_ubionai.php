@@ -60,6 +60,7 @@ $string['status_authorised'] = 'User authorised for service';
 $string['status_tokens'] = 'Active tokens';
 $string['status_untracked_tokens'] = '{$a} token(s) for the UBION AI service user were not issued by this plugin and were left in place. Revoke them manually if they are no longer needed.';
 $string['status_tokencreated'] = 'Token created';
+$string['status_tokenvalid'] = 'Token valid';
 $string['status_tokenlastaccess'] = 'Token last used';
 $string['status_never'] = 'Never';
 $string['hub_configured'] = 'Hub URL configured';
@@ -72,6 +73,9 @@ $string['regcode_help'] = 'The one-time registration code issued by the hub admi
 $string['disconnect'] = 'Disconnect';
 $string['disconnectconfirm'] = 'This deletes only the web service token(s) issued by this plugin for the UBION AI service user. Tokens not issued by this plugin are kept. The user, role and service are kept. Continue?';
 $string['connect_success'] = 'Connection provisioned successfully. Web service token issued for the UBION AI service user.';
+$string['connect_success_reused'] = 'Connection provisioned successfully. The existing web service token for the UBION AI service user was reused.';
+$string['connect_success_adopted'] = 'Connection provisioned successfully. An existing UBION AI token was adopted and is now managed by this plugin.';
+$string['token_adopted'] = 'An existing UBION AI token (name ubionai-mcp) was found and is now managed by this plugin; disconnect will revoke it.';
 $string['connect_success_nohub'] = 'Provisioned locally; no hub URL is configured, so the site was not registered with a hub.';
 $string['connect_hub_needcode'] = 'The hub is configured but the site is not registered yet. Enter the one-time registration code from the hub administrator and connect again.';
 $string['hub_status_registered'] = 'The site was registered with the hub.';
@@ -112,4 +116,8 @@ $string['cli_usage'] = 'Usage:
 --regcode-file=PATH reads the first line of a regular file (at most 1 KiB); use - to read stdin.
 --regcode=VALUE is supported but visible in the process list and shell history.
 --iprestriction=LIST is a comma-separated list of IP addresses or CIDR networks (IPv4/IPv6).
-  Entries are normalised; invalid values exit with code 2. It requires --connect.';
+  Entries are normalised; invalid values exit with code 2. It requires --connect.
+
+Connect is idempotent: an existing valid token is reused, a token named
+\'ubionai-mcp\' is adopted, otherwise one is created. The result reports
+token_action: reused|adopted|created.';

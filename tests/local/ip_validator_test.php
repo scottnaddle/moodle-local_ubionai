@@ -16,6 +16,9 @@
 
 namespace local_ubionai\local;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -24,8 +27,8 @@ defined('MOODLE_INTERNAL') || die();
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_ubionai\local\ip_validator
  */
+#[CoversClass(\local_ubionai\local\ip_validator::class)]
 final class ip_validator_test extends \advanced_testcase {
     /**
      * Valid values and their normalised forms.
@@ -53,10 +56,10 @@ final class ip_validator_test extends \advanced_testcase {
     /**
      * Valid values normalise as documented.
      *
-     * @dataProvider valid_provider
      * @param string $value raw value
      * @param string $expected normalised value
      */
+    #[DataProvider('valid_provider')]
     public function test_valid_values(string $value, string $expected): void {
         $this->assertSame($expected, ip_validator::normalise($value));
     }
@@ -93,10 +96,10 @@ final class ip_validator_test extends \advanced_testcase {
     /**
      * Invalid values raise an invalid_parameter_exception naming the entry.
      *
-     * @dataProvider invalid_provider
      * @param string $value raw value
      * @param string $fragment fragment expected in the message
      */
+    #[DataProvider('invalid_provider')]
     public function test_invalid_values(string $value, string $fragment): void {
         try {
             ip_validator::normalise($value);

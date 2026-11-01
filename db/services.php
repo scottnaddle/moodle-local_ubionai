@@ -87,4 +87,11 @@ $functions = [
         'type' => 'read',
         'capabilities' => 'moodle/course:view, mod/assign:view',
     ],
+    'local_ubionai_list_course_assignments' => [
+        'classname' => 'local_ubionai\external\list_course_assignments',
+        'description' => 'Paged list of courses that contain assignments, with assignments; ' .
+            'no enrolment required.',
+        'type' => 'read',
+        'capabilities' => 'moodle/course:view, mod/assign:view',
+    ],
 ];
