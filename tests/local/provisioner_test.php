@@ -23,6 +23,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Tests for token tracking and disconnect in the provisioner.
  *
+ * @covers \local_ubionai\local\provisioner
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

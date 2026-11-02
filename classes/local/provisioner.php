@@ -341,7 +341,14 @@ class provisioner {
             'password' => random_string(24) . 'Aa1!',
             'policyagreed' => 1,
         ];
-        $userid = \core\user::create_user($record, true, false);
+        // \core\user::create_user() only exists from Moodle 5.3, where user_create_user() became
+        // deprecated. Use whichever API the running core provides.
+        if (method_exists(\core\user::class, 'create_user')) {
+            $userid = \core\user::create_user($record, true, false);
+        } else {
+            require_once($CFG->dirroot . '/user/lib.php');
+            $userid = user_create_user($record, true, false);
+        }
 
         return $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     }

@@ -25,6 +25,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Tests for the hub registration client.
  *
+ * @covers \local_ubionai\local\hub_client
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

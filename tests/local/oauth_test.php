@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 /**
  * Tests for the per-user OAuth delegation (codes, back channel, token minting and revocation).
  *
+ * @covers \local_ubionai\local\oauth
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

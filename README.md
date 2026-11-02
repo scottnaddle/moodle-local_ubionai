@@ -1,10 +1,10 @@
 # local_ubionai
 
-Moodle 5.x local plugin that exposes a few course-authoring operations as web service
+Moodle 4.5 LTS ~ 5.x local plugin that exposes a few course-authoring operations as web service
 functions, for use by the UbionAI / moodle-agent-mcp server. No database tables; uninstalls cleanly.
 
-* Component: `local_ubionai` — install to `public/local/ubionai`
-* Requires Moodle 5.3 LTS+ (2026100500)
+* Component: `local_ubionai` — install to `local/ubionai` (Moodle 4.5, 5.0) or `public/local/ubionai` (Moodle 5.1+)
+* Requires Moodle 4.5 LTS+ (2024100700); supported on Moodle 4.5 LTS ~ 5.3
 
 ## Functions
 
@@ -178,7 +178,7 @@ example to grade them). Requires both capabilities; hidden course modules are om
 
 ## Setup
 
-1. Copy this directory to `public/local/ubionai` and run the upgrade.
+1. Copy this directory to `local/ubionai` (Moodle 4.5, 5.0) or `public/local/ubionai` (Moodle 5.1+), then run the upgrade.
 2. Add the functions to the external service used by the bot's token.
 
 ## Connection
@@ -310,10 +310,22 @@ no-ops until hub-side handling ships in a later iteration.
 
 ## Installation
 
-Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS or later, `requires = 2026100500`),
-then run the upgrade (`php admin/cli/upgrade.php`).
+Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 4.5 LTS, 5.0) or
+`<moodleroot>/public/local/ubionai` (Moodle 5.1 and later; `requires = 2024100700`, supported on
+Moodle 4.5 LTS ~ 5.3), then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.6.1-spike4-wp0 (2026110204)
+
+* Moodle compatibility: the plugin now supports Moodle 4.5 LTS through Moodle 5.3
+  (`requires = 2024100700`, `supported = [405, 503]`). Previously it required Moodle 5.3 LTS.
+* PHPUnit data providers now also carry `@dataProvider` docblock annotations next to the existing
+  `#[DataProvider]` attributes, so the test suite runs on Moodle 4.5 (PHPUnit 9.6) as well as on
+  Moodle 5.x (PHPUnit 11).
+* The service user is created with the API the running core provides: `user_create_user()` on
+  Moodle 4.5, `\core\user::create_user()` from Moodle 5.3 (where the old function is deprecated).
+* CI now tests Moodle 4.5 (PHP 8.1 and 8.3), 5.0 (8.2), 5.1 (8.3), 5.2 (8.4) and 5.3 (8.4) on PostgreSQL.
 
 ### 0.5.1 (2026103106)
 

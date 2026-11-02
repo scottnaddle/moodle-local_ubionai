@@ -24,6 +24,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Tests for the IP / CIDR list validator.
  *
+ * @covers \local_ubionai\local\ip_validator
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -58,6 +59,8 @@ final class ip_validator_test extends \advanced_testcase {
      *
      * @param string $value raw value
      * @param string $expected normalised value
+     *
+     * @dataProvider valid_provider
      */
     #[DataProvider('valid_provider')]
     public function test_valid_values(string $value, string $expected): void {
@@ -98,6 +101,8 @@ final class ip_validator_test extends \advanced_testcase {
      *
      * @param string $value raw value
      * @param string $fragment fragment expected in the message
+     *
+     * @dataProvider invalid_provider
      */
     #[DataProvider('invalid_provider')]
     public function test_invalid_values(string $value, string $fragment): void {
