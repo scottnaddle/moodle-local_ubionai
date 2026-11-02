@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_ubionai';
-$plugin->version = 2026110201;
+$plugin->version = 2026110202;
 $plugin->requires = 2026100500;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.6.1-spike2';
+$plugin->release = '0.6.1-spike3';

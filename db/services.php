@@ -94,6 +94,13 @@ $functions = [
         'type' => 'read',
         'capabilities' => 'moodle/course:view, mod/assign:view',
     ],
+    'local_ubionai_enrol_course_creator' => [
+        'classname' => 'local_ubionai\external\enrol_course_creator',
+        'description' => 'Enrol the caller into a course they just created, with the course creator role ' .
+            '(creatornewroleid, default editingteacher). Checked in the category context.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:create',
+    ],
 ];
 
 // Phase 0 spike: per-user service declared by the component. Core creates and syncs it on every
@@ -110,6 +117,7 @@ $services = [
             'core_enrol_get_enrolled_users',
             'core_course_create_courses',
             'enrol_manual_enrol_users',
+            'local_ubionai_enrol_course_creator',
             'mod_assign_get_assignments',
             'mod_assign_get_submissions',
             'mod_assign_get_grades',

@@ -164,3 +164,6 @@ $string['connections_revoked'] = 'Connection revoked.';
 $string['privacy:metadata:local_ubionai_codes'] = 'One-time codes issued after a teacher allows a Claude connection; deleted when redeemed (within two minutes).';
 $string['privacy:metadata:local_ubionai_codes:userid'] = 'The user who allowed the connection.';
 $string['privacy:metadata:local_ubionai_codes:timecreated'] = 'When the code was issued.';
+$string['manualenrolnotenabled'] = 'Manual enrolments are disabled on this site, so the course creator cannot be enrolled.';
+$string['nocreatorrole'] = 'No role is configured for course creators (creatornewroleid) and no editing teacher role exists.';
+$string['notcoursecreator'] = 'Only the user who created this course can enrol themselves into it.';
