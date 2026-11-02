@@ -204,8 +204,10 @@ final class hub_client_test extends \advanced_testcase {
         $this->assertSame('test-local', $result['siteid']);
 
         $this->assertSame('test-local', get_config('local_ubionai', 'hub_siteid'));
-        $this->assertSame('https://hub.example.test/t/test-local/mcp',
-            get_config('local_ubionai', 'hub_mcp_endpoint'));
+        $this->assertSame(
+            'https://hub.example.test/t/test-local/mcp',
+            get_config('local_ubionai', 'hub_mcp_endpoint')
+        );
         $this->assertSame('203.0.113.10', get_config('local_ubionai', 'hub_egress_ip'));
         $this->assertGreaterThan(0, (int) get_config('local_ubionai', 'hub_registered_at'));
 
@@ -269,12 +271,18 @@ final class hub_client_test extends \advanced_testcase {
         hub_client_test_transport::register(self::CODE);
 
         $needle = '%' . $DB->sql_like_escape(self::CODE) . '%';
-        $this->assertFalse($DB->record_exists_select('config_plugins',
-            $DB->sql_like('value', ':needle'), ['needle' => $needle]));
+        $this->assertFalse($DB->record_exists_select(
+            'config_plugins',
+            $DB->sql_like('value', ':needle'),
+            ['needle' => $needle]
+        ));
 
         if ($DB->get_manager()->table_exists('logstore_standard_log')) {
-            $this->assertFalse($DB->record_exists_select('logstore_standard_log',
-                $DB->sql_like('other', ':needle'), ['needle' => $needle]));
+            $this->assertFalse($DB->record_exists_select(
+                'logstore_standard_log',
+                $DB->sql_like('other', ':needle'),
+                ['needle' => $needle]
+            ));
         }
     }
 

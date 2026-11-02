@@ -46,8 +46,10 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
                    AND qc.parent = (SELECT id FROM {question_categories}
                                      WHERE contextid = qc.contextid AND parent = 0)";
         foreach ($DB->get_records_sql($sql, ['contextlevel' => CONTEXT_MODULE]) as $cat) {
-            $conflict = $DB->record_exists('question_categories',
-                ['contextid' => $cat->contextid, 'name' => 'ubionai']);
+            $conflict = $DB->record_exists(
+                'question_categories',
+                ['contextid' => $cat->contextid, 'name' => 'ubionai']
+            );
             if (!$conflict) {
                 $DB->set_field('question_categories', 'name', 'ubionai', ['id' => $cat->id]);
             }

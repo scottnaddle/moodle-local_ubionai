@@ -54,8 +54,10 @@ class list_course_assignments extends external_api {
         global $CFG, $DB;
         require_once($CFG->libdir . '/gradelib.php');
 
-        $params = self::validate_parameters(self::execute_parameters(),
-            ['offset' => $offset, 'limit' => $limit]);
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            ['offset' => $offset, 'limit' => $limit]
+        );
         $offset = max(0, (int) $params['offset']);
         $limit = min(100, max(1, (int) $params['limit']));
 
@@ -75,7 +77,9 @@ class list_course_assignments extends external_api {
         // Paged, stable order; c.* because build_course() needs the full record.
         $courses = $DB->get_records_sql(
             "SELECT c.* {$fromwhere} ORDER BY c.id",
-            ['siteid' => SITEID], $offset, $limit
+            ['siteid' => SITEID],
+            $offset,
+            $limit
         );
 
         [$validcourses, $warnings] = \core_external\util::validate_courses(array_keys($courses), $courses);

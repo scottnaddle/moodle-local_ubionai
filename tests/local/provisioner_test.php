@@ -72,8 +72,11 @@ final class provisioner_test extends \advanced_testcase {
         $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
         $expected = '203.0.113.10,2001:db8::/32';
 
-        $this->assertSame($expected, $DB->get_field('external_services_users', 'iprestriction',
-            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+        $this->assertSame($expected, $DB->get_field(
+            'external_services_users',
+            'iprestriction',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]
+        ));
 
         $ids = self::tracked_ids();
         $this->assertCount(1, $ids);
@@ -96,10 +99,16 @@ final class provisioner_test extends \advanced_testcase {
 
         $ids = self::tracked_ids();
         $this->assertCount(1, $ids);
-        $this->assertSame('198.51.100.1', $DB->get_field('external_tokens', 'iprestriction',
-            ['id' => $manualid]));
-        $this->assertSame('203.0.113.10', $DB->get_field('external_tokens', 'iprestriction',
-            ['id' => $ids[0]]));
+        $this->assertSame('198.51.100.1', $DB->get_field(
+            'external_tokens',
+            'iprestriction',
+            ['id' => $manualid]
+        ));
+        $this->assertSame('203.0.113.10', $DB->get_field(
+            'external_tokens',
+            'iprestriction',
+            ['id' => $ids[0]]
+        ));
     }
 
     /**
@@ -227,8 +236,10 @@ final class provisioner_test extends \advanced_testcase {
 
         $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
         $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
-        $this->assertSame(1, $DB->count_records('external_tokens',
-            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+        $this->assertSame(1, $DB->count_records(
+            'external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]
+        ));
     }
 
     /**
@@ -248,8 +259,10 @@ final class provisioner_test extends \advanced_testcase {
 
         $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
         $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
-        $this->assertSame(1, $DB->count_records('external_tokens',
-            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+        $this->assertSame(1, $DB->count_records(
+            'external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]
+        ));
     }
 
     /**
@@ -377,8 +390,10 @@ final class provisioner_test extends \advanced_testcase {
         $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
         $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
 
-        $DB->delete_records('external_tokens',
-            ['externalserviceid' => $service->id, 'userid' => $user->id]);
+        $DB->delete_records(
+            'external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]
+        );
         set_config('issued_token_ids', '', 'local_ubionai');
         $manualid = self::create_manual_token((int) $service->id, (int) $user->id, 'manual-admin');
 
@@ -466,8 +481,10 @@ final class provisioner_test extends \advanced_testcase {
 
         $user = $DB->get_record('user', ['username' => provisioner::USERNAME], '*', MUST_EXIST);
         $service = $DB->get_record('external_services', ['shortname' => provisioner::SERVICE], '*', MUST_EXIST);
-        $this->assertSame(1, $DB->count_records('external_tokens',
-            ['externalserviceid' => $service->id, 'userid' => $user->id]));
+        $this->assertSame(1, $DB->count_records(
+            'external_tokens',
+            ['externalserviceid' => $service->id, 'userid' => $user->id]
+        ));
     }
 
     /**
@@ -552,8 +569,11 @@ final class provisioner_test extends \advanced_testcase {
      * @param string $name token name
      * @return int created token row id
      */
-    private static function create_manual_token(int $serviceid, int $userid,
-            string $name = 'manual-admin'): int {
+    private static function create_manual_token(
+        int $serviceid,
+        int $userid,
+        string $name = 'manual-admin'
+    ): int {
         global $DB;
 
         $token = \core_external\util::generate_token(

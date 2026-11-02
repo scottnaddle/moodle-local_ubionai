@@ -105,12 +105,16 @@ class hub_client {
             return ['ok' => false, 'status' => 'bad_response', 'siteid' => null];
         }
 
-        if (!isset($data->site_id) || !is_string($data->site_id)
-                || preg_match('/\A[a-z0-9][a-z0-9-]{1,62}\z/D', $data->site_id) !== 1) {
+        if (
+            !isset($data->site_id) || !is_string($data->site_id)
+                || preg_match('/\A[a-z0-9][a-z0-9-]{1,62}\z/D', $data->site_id) !== 1
+        ) {
             return ['ok' => false, 'status' => 'bad_response', 'siteid' => null];
         }
-        if (!isset($data->mcp_endpoint) || !is_string($data->mcp_endpoint)
-                || !self::endpoint_matches_hub($data->mcp_endpoint, $endpoint)) {
+        if (
+            !isset($data->mcp_endpoint) || !is_string($data->mcp_endpoint)
+                || !self::endpoint_matches_hub($data->mcp_endpoint, $endpoint)
+        ) {
             return ['ok' => false, 'status' => 'bad_response', 'siteid' => null];
         }
         if (!isset($data->mcp_bearer) || !is_string($data->mcp_bearer) || $data->mcp_bearer === '') {
@@ -159,8 +163,10 @@ class hub_client {
         if (strtolower($parts['scheme']) !== 'https') {
             return null;
         }
-        if (isset($parts['user']) || isset($parts['pass']) || isset($parts['query'])
-                || isset($parts['fragment'])) {
+        if (
+            isset($parts['user']) || isset($parts['pass']) || isset($parts['query'])
+                || isset($parts['fragment'])
+        ) {
             return null;
         }
 

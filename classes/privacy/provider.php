@@ -28,10 +28,7 @@ namespace local_ubionai\privacy;
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements
-        \core_privacy\local\metadata\provider,
-        \core_privacy\local\request\plugin\provider,
-        \core_privacy\local\request\core_userlist_provider {
+class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
     /**
      * Describe the external location that data is sent to.
      *
@@ -39,7 +36,8 @@ class provider implements
      * @return \core_privacy\local\metadata\collection
      */
     public static function get_metadata(
-            \core_privacy\local\metadata\collection $collection): \core_privacy\local\metadata\collection {
+        \core_privacy\local\metadata\collection $collection
+    ): \core_privacy\local\metadata\collection {
         $collection->add_external_location_link('ubionai_hub', [
             'fullname' => 'privacy:metadata:ubionai_hub:fullname',
             'email' => 'privacy:metadata:ubionai_hub:email',
@@ -78,7 +76,8 @@ class provider implements
      * @param \core_privacy\local\request\approved_contextlist $contextlist the approved contexts
      */
     public static function export_user_data(
-            \core_privacy\local\request\approved_contextlist $contextlist): void {
+        \core_privacy\local\request\approved_contextlist $contextlist
+    ): void {
     }
 
     /**
@@ -99,7 +98,8 @@ class provider implements
      * @param \core_privacy\local\request\approved_contextlist $contextlist the approved contexts
      */
     public static function delete_data_for_user(
-            \core_privacy\local\request\approved_contextlist $contextlist): void {
+        \core_privacy\local\request\approved_contextlist $contextlist
+    ): void {
     }
 
     /**
