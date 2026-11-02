@@ -55,8 +55,13 @@ class update_module extends external_api {
      * @param string $settings JSON settings
      * @return array
      */
-    public static function execute(int $cmid, string $name = '', string $intro = '', int $visible = -1,
-            string $settings = '{}'): array {
+    public static function execute(
+        int $cmid,
+        string $name = '',
+        string $intro = '',
+        int $visible = -1,
+        string $settings = '{}'
+    ): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
         require_once($CFG->dirroot . '/course/modlib.php');

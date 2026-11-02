@@ -198,7 +198,8 @@ class get_course_assignments extends external_api {
         return new external_single_structure([
             'courses' => new external_multiple_structure(self::course_structure()),
             'warnings' => new external_multiple_structure(
-                new external_single_structure([]), VALUE_OPTIONAL
+                new external_single_structure([]),
+                VALUE_OPTIONAL
             ),
         ]);
     }

@@ -38,8 +38,12 @@ class setup {
 
         $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
         if (!$roleid) {
-            $roleid = create_role('UBION AI web service user', self::ROLE_SHORTNAME,
-                'Minimal role for teachers connected to Claude: REST web service use only.', '');
+            $roleid = create_role(
+                'UBION AI web service user',
+                self::ROLE_SHORTNAME,
+                'Minimal role for teachers connected to Claude: REST web service use only.',
+                ''
+            );
         }
         set_role_contextlevels($roleid, [CONTEXT_SYSTEM]);
         // Core capability: already registered, so this is allowed during install (plugin caps are not).

@@ -46,8 +46,10 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
                    AND qc.parent = (SELECT id FROM {question_categories}
                                      WHERE contextid = qc.contextid AND parent = 0)";
         foreach ($DB->get_records_sql($sql, ['contextlevel' => CONTEXT_MODULE]) as $cat) {
-            $conflict = $DB->record_exists('question_categories',
-                ['contextid' => $cat->contextid, 'name' => 'ubionai']);
+            $conflict = $DB->record_exists(
+                'question_categories',
+                ['contextid' => $cat->contextid, 'name' => 'ubionai']
+            );
             if (!$conflict) {
                 $DB->set_field('question_categories', 'name', 'ubionai', ['id' => $cat->id]);
             }
@@ -106,6 +108,13 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
             $dbman->create_table($table);
         }
         upgrade_plugin_savepoint(true, 2026110200, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110203) {
+        // 0.6.1-spike4: no data change. core_course_create_courses and enrol_manual_enrol_users are
+        // no longer declared on ubionai_user (no course creation via MCP); core drops them from the
+        // service after this hook (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026110203, 'local', 'ubionai');
     }
 
     return true;

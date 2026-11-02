@@ -49,7 +49,8 @@ if ($hassiteconfig) {
     $page = new admin_settingpage('local_ubionai', get_string('connection', 'local_ubionai'));
     // Phase 0 spike: default null => core lists it on admin/upgradesettings.php right after install
     // (any_new_admin_settings) and CLI install/upgrade skips it (admin_apply_default_settings).
-    $consent = new admin_setting_configselect('local_ubionai/consent',
+    $consent = new admin_setting_configselect(
+        'local_ubionai/consent',
         get_string('consent', 'local_ubionai'),
         get_string('consent_desc', 'local_ubionai'),
         null,
@@ -57,13 +58,17 @@ if ($hassiteconfig) {
             // Declined first so that a blind "Save changes" never consents.
             'declined' => get_string('consent_declined', 'local_ubionai'),
             'accepted' => get_string('consent_accepted', 'local_ubionai'),
-        ]);
+        ]
+    );
     $consent->set_updatedcallback('\\local_ubionai\\local\\setup::consent_updated');
     $page->add($consent);
-    $page->add(new local_ubionai_admin_setting_hub_url('local_ubionai/hub_url',
+    $page->add(new local_ubionai_admin_setting_hub_url(
+        'local_ubionai/hub_url',
         get_string('hub_url', 'local_ubionai'),
         get_string('hub_url_desc', 'local_ubionai'),
-        '', PARAM_URL));
+        '',
+        PARAM_URL
+    ));
     // Easy Connect spike 2: per-user OAuth through the hub. Both values come from the hub operator.
     $page->add(new admin_setting_configtext(
         'local_ubionai/hub_site_id',
@@ -80,8 +85,10 @@ if ($hassiteconfig) {
     ));
     $ADMIN->add('localplugins', $page);
 
-    $ADMIN->add('localplugins', new admin_externalpage('local_ubionai_connection',
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_ubionai_connection',
         get_string('connectionpage', 'local_ubionai'),
         new moodle_url('/local/ubionai/connect.php'),
-        'local/ubionai:manageconnection'));
+        'local/ubionai:manageconnection'
+    ));
 }

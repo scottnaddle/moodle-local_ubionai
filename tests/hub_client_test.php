@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Tests for the hub registration client.
+ *
+ * @package    local_ubionai
+ * @copyright  2026 scottnaddle
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace local_ubionai;
 
 use local_ubionai\local\hub_client;
@@ -22,9 +30,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/fixtures/hub_client_test_transport.php');
+
 /**
  * Tests for the hub registration client.
  *
+ * @covers \local_ubionai\local\hub_client
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -203,8 +214,10 @@ final class hub_client_test extends \advanced_testcase {
         $this->assertSame('test-local', $result['siteid']);
 
         $this->assertSame('test-local', get_config('local_ubionai', 'hub_siteid'));
-        $this->assertSame('https://hub.example.test/t/test-local/mcp',
-            get_config('local_ubionai', 'hub_mcp_endpoint'));
+        $this->assertSame(
+            'https://hub.example.test/t/test-local/mcp',
+            get_config('local_ubionai', 'hub_mcp_endpoint')
+        );
         $this->assertSame('203.0.113.10', get_config('local_ubionai', 'hub_egress_ip'));
         $this->assertGreaterThan(0, (int) get_config('local_ubionai', 'hub_registered_at'));
 
@@ -268,12 +281,18 @@ final class hub_client_test extends \advanced_testcase {
         hub_client_test_transport::register(self::CODE);
 
         $needle = '%' . $DB->sql_like_escape(self::CODE) . '%';
-        $this->assertFalse($DB->record_exists_select('config_plugins',
-            $DB->sql_like('value', ':needle'), ['needle' => $needle]));
+        $this->assertFalse($DB->record_exists_select(
+            'config_plugins',
+            $DB->sql_like('value', ':needle'),
+            ['needle' => $needle]
+        ));
 
         if ($DB->get_manager()->table_exists('logstore_standard_log')) {
-            $this->assertFalse($DB->record_exists_select('logstore_standard_log',
-                $DB->sql_like('other', ':needle'), ['needle' => $needle]));
+            $this->assertFalse($DB->record_exists_select(
+                'logstore_standard_log',
+                $DB->sql_like('other', ':needle'),
+                ['needle' => $needle]
+            ));
         }
     }
 
@@ -293,33 +312,5 @@ final class hub_client_test extends \advanced_testcase {
             'errno' => 0,
             'httpcode' => 200,
         ];
-    }
-}
-
-/**
- * Transport double for hub_client tests.
- *
- * @package    local_ubionai
- * @copyright  2026 scottnaddle
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-class hub_client_test_transport extends hub_client {
-    /** @var array<int, array{endpoint: string, body: string}> Recorded requests. */
-    public static $calls = [];
-
-    /** @var array{body: string, errno: int, httpcode: int} Next response. */
-    public static $response = ['body' => '', 'errno' => 0, 'httpcode' => 200];
-
-    /**
-     * Record the request and return the configured response.
-     *
-     * @param string $endpoint the registration endpoint
-     * @param string $body the JSON request body
-     * @return array{body: string, errno: int, httpcode: int}
-     */
-    protected static function post_json(string $endpoint, string $body): array {
-        self::$calls[] = ['endpoint' => $endpoint, 'body' => $body];
-
-        return self::$response;
     }
 }

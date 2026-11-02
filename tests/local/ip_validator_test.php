@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Tests for the IP / CIDR list validator.
+ *
+ * @package    local_ubionai
+ * @copyright  2026 scottnaddle
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace local_ubionai\local;
 
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -21,9 +29,12 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/../fixtures/ip_validator_hub_transport.php');
+
 /**
  * Tests for the IP / CIDR list validator.
  *
+ * @covers \local_ubionai\local\ip_validator
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -58,6 +69,8 @@ final class ip_validator_test extends \advanced_testcase {
      *
      * @param string $value raw value
      * @param string $expected normalised value
+     *
+     * @dataProvider valid_provider
      */
     #[DataProvider('valid_provider')]
     public function test_valid_values(string $value, string $expected): void {
@@ -98,6 +111,8 @@ final class ip_validator_test extends \advanced_testcase {
      *
      * @param string $value raw value
      * @param string $fragment fragment expected in the message
+     *
+     * @dataProvider invalid_provider
      */
     #[DataProvider('invalid_provider')]
     public function test_invalid_values(string $value, string $fragment): void {
@@ -182,28 +197,5 @@ final class ip_validator_test extends \advanced_testcase {
 
         $this->assertTrue($result['ok']);
         $this->assertSame('203.0.113.10,2001:db8::/32', get_config('local_ubionai', 'hub_egress_ip'));
-    }
-}
-
-/**
- * Transport double for hub_client registration tests.
- *
- * @package    local_ubionai
- * @copyright  2026 scottnaddle
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-class ip_validator_hub_transport extends hub_client {
-    /** @var array{body: string, errno: int, httpcode: int} Next response. */
-    public static $response = ['body' => '', 'errno' => 0, 'httpcode' => 200];
-
-    /**
-     * Return the configured response without making a request.
-     *
-     * @param string $endpoint the registration endpoint
-     * @param string $body the JSON request body
-     * @return array{body: string, errno: int, httpcode: int}
-     */
-    protected static function post_json(string $endpoint, string $body): array {
-        return self::$response;
     }
 }

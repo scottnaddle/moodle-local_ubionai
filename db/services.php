@@ -108,8 +108,6 @@ $services = [
             'core_course_get_courses_by_field',
             'core_course_get_contents',
             'core_enrol_get_enrolled_users',
-            'core_course_create_courses',
-            'enrol_manual_enrol_users',
             'mod_assign_get_assignments',
             'mod_assign_get_submissions',
             'mod_assign_get_grades',

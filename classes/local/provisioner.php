@@ -255,8 +255,11 @@ class provisioner {
                 [$insql, $params] = $DB->get_in_or_equal($trackedids, SQL_PARAMS_NAMED, 'tokenid');
                 $params['serviceid'] = (int) $service->id;
                 $params['userid'] = (int) $user->id;
-                $ourtracked = (int) $DB->count_records_select('external_tokens',
-                    "externalserviceid = :serviceid AND userid = :userid AND id {$insql}", $params);
+                $ourtracked = (int) $DB->count_records_select(
+                    'external_tokens',
+                    "externalserviceid = :serviceid AND userid = :userid AND id {$insql}",
+                    $params
+                );
             }
             $untrackedcount = max(0, $usertokens - $ourtracked);
         }
@@ -265,8 +268,11 @@ class provisioner {
         if ($service && $user && $trackedids) {
             [$validsql, $params] = self::valid_token_select((int) $service->id, (int) $user->id);
             [$insql, $inparams] = $DB->get_in_or_equal($trackedids, SQL_PARAMS_NAMED, 'tk');
-            $tokenvalid = $DB->record_exists_select('external_tokens',
-                "id {$insql} AND {$validsql}", $inparams + $params);
+            $tokenvalid = $DB->record_exists_select(
+                'external_tokens',
+                "id {$insql} AND {$validsql}",
+                $inparams + $params
+            );
         }
 
         $timecreated = null;
@@ -284,8 +290,10 @@ class provisioner {
 
         return [
             'webservices_enabled' => !empty(get_config('core', 'enablewebservices')),
-            'rest_enabled' => in_array('rest', array_filter(explode(',',
-                (string) get_config('core', 'webserviceprotocols'))), true),
+            'rest_enabled' => in_array('rest', array_filter(explode(
+                ',',
+                (string) get_config('core', 'webserviceprotocols')
+            )), true),
             'userid' => $user ? (int) $user->id : null,
             'roleid' => $roleid ? (int) $roleid : null,
             'serviceid' => $service ? (int) $service->id : null,
@@ -293,8 +301,10 @@ class provisioner {
                 ? (int) $DB->count_records('external_services_functions', ['externalserviceid' => $service->id])
                 : 0,
             'user_authorised' => ($service && $user)
-                ? $DB->record_exists('external_services_users',
-                    ['externalserviceid' => $service->id, 'userid' => $user->id])
+                ? $DB->record_exists(
+                    'external_services_users',
+                    ['externalserviceid' => $service->id, 'userid' => $user->id]
+                )
                 : false,
             'token_count' => count($rows),
             'tokens_tracked' => $trackedcount,
@@ -341,7 +351,14 @@ class provisioner {
             'password' => random_string(24) . 'Aa1!',
             'policyagreed' => 1,
         ];
-        $userid = \core\user::create_user($record, true, false);
+        // \core\user::create_user() only exists from Moodle 5.3, where user_create_user() became
+        // deprecated. Use whichever API the running core provides.
+        if (method_exists(\core\user::class, 'create_user')) {
+            $userid = \core\user::create_user($record, true, false);
+        } else {
+            require_once($CFG->dirroot . '/user/lib.php');
+            $userid = user_create_user($record, true, false);
+        }
 
         return $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     }
@@ -372,8 +389,12 @@ class provisioner {
 
         foreach (['editingteacher', 'teacher', 'student'] as $target) {
             $targetid = $DB->get_field('role', 'id', ['shortname' => $target]);
-            if ($targetid && !$DB->record_exists('role_allow_assign',
-                    ['roleid' => $roleid, 'allowassign' => $targetid])) {
+            if (
+                $targetid && !$DB->record_exists(
+                    'role_allow_assign',
+                    ['roleid' => $roleid, 'allowassign' => $targetid]
+                )
+            ) {
                 core_role_set_assign_allowed($roleid, $targetid);
             }
         }
@@ -438,8 +459,12 @@ class provisioner {
                 $skipped[] = $function;
                 continue;
             }
-            if (!$DB->record_exists('external_services_functions',
-                    ['externalserviceid' => $serviceid, 'functionname' => $function])) {
+            if (
+                !$DB->record_exists(
+                    'external_services_functions',
+                    ['externalserviceid' => $serviceid, 'functionname' => $function]
+                )
+            ) {
                 $DB->insert_record('external_services_functions', (object) [
                     'externalserviceid' => $serviceid,
                     'functionname' => $function,
@@ -523,9 +548,13 @@ class provisioner {
         $kept = null;
         if ($tracked) {
             [$insql, $params] = $DB->get_in_or_equal($tracked, SQL_PARAMS_NAMED, 'tk');
-            $rows = $DB->get_records_select('external_tokens',
-                "id {$insql} AND {$validsql}", $params + $validparams,
-                'timecreated DESC, id DESC', 'id');
+            $rows = $DB->get_records_select(
+                'external_tokens',
+                "id {$insql} AND {$validsql}",
+                $params + $validparams,
+                'timecreated DESC, id DESC',
+                'id'
+            );
             $kept = $rows ? reset($rows) : null;
             foreach ($tracked as $id) {
                 if ($kept === null || (int) $kept->id !== (int) $id) {
@@ -636,17 +665,24 @@ class provisioner {
 
         $service = self::service();
         $user = self::service_user();
-        $rows = $ids ? $DB->get_records_list('external_tokens', 'id', $ids, '',
-            'id, externalserviceid, userid') : [];
+        $rows = $ids ? $DB->get_records_list(
+            'external_tokens',
+            'id',
+            $ids,
+            '',
+            'id, externalserviceid, userid'
+        ) : [];
 
         $valid = [];
         foreach ($ids as $id) {
             if (!isset($rows[$id])) {
                 continue; // Gone: untrack.
             }
-            if ($service && $user
+            if (
+                $service && $user
                     && ((int) $rows[$id]->externalserviceid !== (int) $service->id
-                        || (int) $rows[$id]->userid !== (int) $user->id)) {
+                        || (int) $rows[$id]->userid !== (int) $user->id)
+            ) {
                 continue; // Points elsewhere: untrack, do NOT delete.
             }
             $valid[] = $id;
