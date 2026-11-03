@@ -303,7 +303,7 @@ Settings (all three required; values come from the hub operator):
 ## Hub self-registration: decisions of 2026-11-03 (contract §8.3)
 
 * **Default hub.** An empty `local_ubionai/hub_url` uses `https://mcp.ubion.global`
-  (`registrar::DEFAULT_HUB`). It is a *provisional* default; administrators can set another hub URL.
+  (`registrar::DEFAULT_HUB`). Administrators can set another hub URL.
 * **New sites** are created by the hub as `active` at the lowest tier (`limited`). The hub operator
   can turn auto-activation off (the site then shows "pending") or disable a single site (the plugin
   then reports `host_blocked`).

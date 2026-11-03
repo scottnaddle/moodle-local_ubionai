@@ -381,16 +381,16 @@ final class registrar_test extends \advanced_testcase {
     }
 
     /**
-     * An empty hub_url uses the provisional default hub; the setting overrides it.
+     * An empty hub_url uses the default hub; the setting overrides it.
      */
-    public function test_default_hub_is_provisional_and_overridable(): void {
+    public function test_default_hub_is_overridable(): void {
         $this->assertSame('https://mcp.ubion.global', registrar::DEFAULT_HUB);
         set_config('hub_url', '', 'local_ubionai');
         $this->assertSame('https://mcp.ubion.global', registrar::hub_base());
         set_config('hub_url', 'https://hub.school.example/', 'local_ubionai');
         $this->assertSame('https://hub.school.example', registrar::hub_base());
         $this->assertStringContainsString('https://mcp.ubion.global', get_string('hub_url_desc', 'local_ubionai'));
-        $this->assertStringContainsString('provisional', get_string('hub_url_desc', 'local_ubionai'));
+        $this->assertStringNotContainsString('provisional', get_string('hub_url_desc', 'local_ubionai'));
     }
 
     /**

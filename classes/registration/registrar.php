@@ -34,10 +34,10 @@ use local_ubionai\local\oauth;
  */
 class registrar {
     /**
-     * Provisional (temporary) default hub, used when the advanced hub_url setting is empty.
+     * Default hub, used when the advanced hub_url setting is empty.
      *
-     * Decided 2026-11-03 (Scott, contract §8.3 #6): not final; site administrators can override
-     * it with the hub_url plugin setting.
+     * Decided 2026-11-03 (Scott, contract §8.3 #6); site administrators can override it with the
+     * hub_url plugin setting.
      */
     public const DEFAULT_HUB = 'https://mcp.ubion.global';
     /** Limit names the hub reports in tenant.limits (decided 2026-11-03, §8.3 #2) with a language string. */

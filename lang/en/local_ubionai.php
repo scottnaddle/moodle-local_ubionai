@@ -44,7 +44,7 @@ $string['ubionai:manageconnection'] = 'Manage the UBION AI connection';
 // Settings.
 $string['connection'] = 'UBION AI connection';
 $string['hub_url'] = 'Hub URL';
-$string['hub_url_desc'] = 'Base URL of the UBION AI hub used for site registration. Must start with https://. Advanced: leave empty to use the provisional default hub (https://mcp.ubion.global) for automatic registration. This default is temporary and may change; enter another hub URL here if UBION gives you one. With the manual (legacy) Connect flow an empty value provisions the web service locally without registering with a hub.';
+$string['hub_url_desc'] = 'Base URL of the UBION AI hub used for site registration. Must start with https://. Advanced: leave empty to use the default hub (https://mcp.ubion.global) for automatic registration. Enter another hub URL here if UBION gives you one. With the manual (legacy) Connect flow an empty value provisions the web service locally without registering with a hub.';
 $string['hub_url_invalid'] = 'The hub URL must start with https://.';
 $string['connectionpage'] = 'Connection status and actions';
 
