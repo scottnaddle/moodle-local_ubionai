@@ -149,7 +149,7 @@ final class registrar_test extends \advanced_testcase {
         $this->assertSame(5, $status['limits']['max_teachers']);
         $this->assertSame(registration_fake_hub::BASE . '/m/www.example.com/moodle/mcp', $status['mcp_url']);
         $this->assertSame(['203.0.113.10'], $status['egress_ips']);
-        $this->assertSame('legacy_file', $status['auth_mode']);
+        $this->assertSame('shared_secret', $status['auth_mode']);
         $this->assertSame(registration_fake_hub::SECRET, secrets::reveal('current'));
         $this->assertStringNotContainsString(registration_fake_hub::SECRET, (string) get_config('local_ubionai', 'site_secret_current'));
         // The pending record is deleted once confirmed: the callback answers 404 again.

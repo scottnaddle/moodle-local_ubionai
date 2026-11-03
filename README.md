@@ -300,6 +300,27 @@ Settings (all three required; values come from the hub operator):
   `base64url(json) . "." . base64url(HMAC-SHA256(secret, "ubionai-oauth-v1." . body))` with claims
   `typ`, `aud` (= `$CFG->wwwroot`), `site` and `exp`.
 
+### Self-registered sites (shared secret, `/m/<host_key>`)
+
+A site that registered itself with the hub (consent given, secret confirmed) does not use the
+settings above. `local_ubionai\local\oauth` then switches to the `shared_secret` mode on its own:
+
+* **Key** — `HKDF-SHA256(ikm = site secret, salt = "ubionai-site-v1", info = "oauth-mac|<site_key>|v<n>")`,
+  32 bytes, where `n` is the `kv` claim of the message (the current secret version, or the not yet
+  promoted one during a rotation). The secret itself is stored encrypted and never shown.
+* **Site id** — the `site` claim is the `site_key` the hub assigned at registration (not `hub_site_id`).
+* **Audience** — the `aud` claim is the hub's canonical site URL (lower-case host, no `:443`, no
+  trailing slash), compared against `$CFG->wwwroot` in the same normalisation.
+* **Callback** — `{hub}/m/<host_key>/oauth/callback`, taken from the `allowed_callbacks` the hub
+  returned at registration; the `iss` claim must be that `/m/` issuer. Only `/m/` callbacks are
+  accepted in this mode.
+* **Everything else stays the same**: the message format (`base64url(json) . "." . base64url(HMAC)`),
+  the `typ`/`aud`/`site`/`exp` checks, the one-time code, `oauth/exchange.php` and `oauth/revoke.php`.
+
+A site that is not registered (no confirmed secret, consent withdrawn, or the self-registration
+switch off) keeps the legacy `oauth_secret` + `{hub_url}/t/{hub_site_id}/oauth/callback` path
+unchanged.
+
 ## Hub self-registration: decisions of 2026-11-03 (contract §8.3)
 
 * **Default hub.** An empty `local_ubionai/hub_url` uses `https://mcp.ubion.global`
@@ -333,6 +354,18 @@ Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 4.5 LTS,
 Moodle 4.5 LTS ~ 5.3), then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.7.2 (2026110302)
+
+* Teacher OAuth now works on a self-registered site: when the hub confirmed a site secret,
+  `local_ubionai\local\oauth` verifies hub messages with the HKDF-derived MAC key of the `kv`
+  version and accepts the `{hub}/m/<host_key>/oauth/callback` of the registration result, instead of
+  the legacy `oauth_secret` + `/t/` path. The `site` claim is the `site_key`, the `aud` claim is
+  compared in the hub's canonical URL form, and the `iss` claim must be the `/m/` issuer. Sites that
+  are not registered keep the legacy path unchanged. `oauth/exchange.php` and `oauth/revoke.php`
+  follow the same rule.
+* New tests: `tests/local/oauth_registered_test.php` (both modes, refused callbacks, refused
+  signatures, rotation versions).
 
 ### 0.6.1-spike4-wp0 (2026110204)
 
