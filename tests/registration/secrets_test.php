@@ -96,8 +96,13 @@ final class secrets_test extends \advanced_testcase {
      * hash_hkdf follows RFC 5869 (test case 1) with the argument order this plugin uses.
      */
     public function test_hkdf_rfc5869(): void {
-        $okm = hash_hkdf('sha256', str_repeat("\x0b", 22), 42, hex2bin('f0f1f2f3f4f5f6f7f8f9'),
-            hex2bin('000102030405060708090a0b0c'));
+        $okm = hash_hkdf(
+            'sha256',
+            str_repeat("\x0b", 22),
+            42,
+            hex2bin('f0f1f2f3f4f5f6f7f8f9'),
+            hex2bin('000102030405060708090a0b0c')
+        );
         $this->assertSame(
             '3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865',
             bin2hex($okm)

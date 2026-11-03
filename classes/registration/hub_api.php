@@ -64,8 +64,12 @@ class hub_api {
      * @return array{httpcode: int, data: array|null, errno: int}
      */
     public function confirm(string $sitekey, int $version, string $secret): array {
-        return $this->call('POST', '/api/v1/sites/' . rawurlencode($sitekey) . '/confirm',
-            ['secret_version' => $version], $secret);
+        return $this->call(
+            'POST',
+            '/api/v1/sites/' . rawurlencode($sitekey) . '/confirm',
+            ['secret_version' => $version],
+            $secret
+        );
     }
 
     /**
