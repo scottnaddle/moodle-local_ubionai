@@ -100,6 +100,20 @@ class registrar {
     }
 
     /**
+     * base64url(sha256(base64url_decode(challenge))): the hash covers the decoded bytes, not the string.
+     *
+     * @param string $challenge base64url challenge as returned to the hub callback
+     * @return string
+     */
+    public static function challenge_sha256(string $challenge): string {
+        $raw = base64_decode(strtr($challenge, '-_', '+/') . str_repeat('=', (4 - strlen($challenge) % 4) % 4), true);
+        if ($raw === false || $raw === '') {
+            throw new \coding_exception('invalid challenge');
+        }
+        return oauth::b64(hash('sha256', $raw, true));
+    }
+
+    /**
      * Consent setting changed (called from setup::consent_updated). Never throws.
      *
      * @param string|false $value new consent value
@@ -343,7 +357,7 @@ class registrar {
             'plugin' => ['component' => 'local_ubionai', 'version' => $info['version'], 'release' => $info['release']],
             'site_identifier_hash' => self::site_identifier_hash(),
             'callback_nonce' => $nonce,
-            'challenge_sha256' => oauth::b64(hash('sha256', $challenge, true)),
+            'challenge_sha256' => self::challenge_sha256($challenge),
             'consent' => [
                 'accepted' => true,
                 'terms_version' => self::TERMS_VERSION,

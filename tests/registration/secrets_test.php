@@ -24,6 +24,7 @@
 
 namespace local_ubionai\registration;
 
+use local_ubionai\local\oauth;
 use local_ubionai\registration_fake_hub;
 use PHPUnit\Framework\Attributes\CoversClass;
 
@@ -37,6 +38,7 @@ require_once(__DIR__ . '/../fixtures/registration_fake_hub.php');
  * @covers \local_ubionai\registration\secrets
  * @covers \local_ubionai\registration\shared_secret_authenticator
  * @covers \local_ubionai\registration\signature_authenticator
+ * @covers \local_ubionai\registration\registrar
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -44,6 +46,7 @@ require_once(__DIR__ . '/../fixtures/registration_fake_hub.php');
 #[CoversClass(secrets::class)]
 #[CoversClass(shared_secret_authenticator::class)]
 #[CoversClass(signature_authenticator::class)]
+#[CoversClass(registrar::class)]
 final class secrets_test extends \advanced_testcase {
     /**
      * Reset after each test.
@@ -119,36 +122,43 @@ final class secrets_test extends \advanced_testcase {
     }
 
     /**
-     * The derivation matches the hub's interop vectors when the file is available.
+     * The plugin matches the vendored hub interop vectors (tests/fixtures/registration-v1.json, fake values):
+     * HKDF MAC key, callback challenge_sha256 and a signed shared_secret message.
      */
     public function test_hub_vectors(): void {
-        $candidates = array_filter([
-            getenv('UBIONAI_REG_VECTORS') ?: null,
-            __DIR__ . '/../fixtures/registration-v1.json',
-            __DIR__ . '/../../../wt-wp2/tests/vectors/registration-v1.json',
-        ]);
-        $file = null;
-        foreach ($candidates as $candidate) {
-            if (is_readable($candidate)) {
-                $file = $candidate;
-                break;
-            }
-        }
-        if ($file === null) {
-            $this->markTestSkipped('registration-v1.json interop vectors not available');
-        }
+        $file = __DIR__ . '/../fixtures/registration-v1.json';
+        $this->assertFileIsReadable($file);
         $data = json_decode((string) file_get_contents($file), true);
-        $cases = $data['mac_keys'] ?? $data['vectors'] ?? $data['cases'] ?? (isset($data['site_secret']) ? [$data] : []);
-        $this->assertNotEmpty($cases, 'no vectors in ' . $file);
-        foreach ($cases as $case) {
-            $version = (int) ($case['secret_version'] ?? $case['version'] ?? 0);
-            $key = secrets::derive_mac_key((string) $case['site_secret'], (string) $case['site_key'], $version);
-            if (isset($case['mac_key_hex'])) {
-                $this->assertSame(strtolower($case['mac_key_hex']), bin2hex($key));
-            } else {
-                $this->assertSame((string) $case['mac_key'], \local_ubionai\local\oauth::b64($key));
-            }
-        }
+        $this->assertIsArray($data);
+
+        // HKDF ikm is the transmitted base64url secret string, not its decoded bytes.
+        $secret = (string) $data['site_secret'];
+        $sitekey = (string) $data['site_key'];
+        $version = (int) $data['secret_version'];
+        $this->assertSame($data['hkdf']['info'], secrets::hkdf_info($sitekey, $version));
+        $key = secrets::derive_mac_key($secret, $sitekey, $version);
+        $this->assertSame($data['hkdf']['length'], strlen($key));
+        $this->assertSame($data['mac_key_hex'], bin2hex($key));
+
+        // challenge_sha256 hashes the decoded challenge bytes, not the base64url string.
+        $challenge = $data['callback_challenge'];
+        $this->assertSame($challenge['challenge_sha256'], registrar::challenge_sha256($challenge['challenge_b64url']));
+        $this->assertNotSame($challenge['challenge_sha256'], oauth::b64(hash('sha256', $challenge['challenge_b64url'], true)));
+
+        // Token: base64url(json(sort_keys, compact)) "." base64url(HMAC-SHA256(mac_key, "ubionai-oauth-v1." + body)).
+        $claims = $data['message']['claims'];
+        $token = $data['message']['token'];
+        [$body, $mac] = explode('.', $token);
+        $sorted = $claims;
+        ksort($sorted);
+        $this->assertSame($body, oauth::b64(json_encode($sorted, JSON_UNESCAPED_SLASHES)));
+        $this->assertSame($mac, oauth::b64(hash_hmac('sha256', shared_secret_authenticator::MAC_PREFIX . $body, $key, true)));
+        $this->assertSame($token, shared_secret_authenticator::sign_with_key($sorted, $key));
+
+        // The authenticator accepts the hub token with the stored secret.
+        secrets::store_next($secret, $version);
+        secrets::promote_next();
+        $this->assertEquals($claims, registrar::authenticator('shared_secret')->verify($token));
     }
 
     /**

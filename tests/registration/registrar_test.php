@@ -128,7 +128,10 @@ final class registrar_test extends \advanced_testcase {
         [$status, $body] = $this->hub->callbackresult;
         $this->assertSame(200, $status);
         $this->assertSame($request['callback_nonce'], $body['nonce']);
-        $this->assertSame($request['challenge_sha256'], oauth::b64(hash('sha256', $body['challenge'], true)));
+        $rawchallenge = base64_decode(strtr($body['challenge'], '-_', '+/'), true);
+        $this->assertSame(32, strlen($rawchallenge));
+        $this->assertSame($request['challenge_sha256'], oauth::b64(hash('sha256', $rawchallenge, true)));
+        $this->assertSame($request['challenge_sha256'], registrar::challenge_sha256($body['challenge']));
         $this->assertStringNotContainsString($body['challenge'], $this->hub->calls_to('register')[0]['body']);
 
         // Confirm authenticates with the new secret; register sends no Authorization header at all.
