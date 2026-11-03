@@ -252,7 +252,8 @@ class registrar {
             'retry_exhausted' => !empty($cfg->reg_exhausted),
             'registered_at' => (int) ($cfg->registered_at ?? 0) ?: null,
             'url_changed' => $registeredurl !== '' && $registeredurl !== (string) $CFG->wwwroot,
-            'auth_mode' => (string) ($cfg->auth_mode ?? 'legacy_file'),
+            // Effective hub message protection of oauth.php (shared_secret once registered).
+            'auth_mode' => oauth::mode(),
             'grants_kept' => isset($cfg->grants_kept) ? (bool) $cfg->grants_kept : null,
         ];
     }

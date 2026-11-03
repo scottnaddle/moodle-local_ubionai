@@ -57,7 +57,7 @@ class setup {
         if (get_config('local_ubionai', 'connect_state') === false) {
             set_config('connect_state', 'awaiting_consent', 'local_ubionai');
         }
-        // Self-registration (WP1). Message auth of oauth.php stays legacy_file until WP4 switches it.
+        // Self-registration (WP1). oauth.php switches to shared_secret by itself once registered (oauth::mode()).
         if (get_config('local_ubionai', 'reg_state') === false) {
             set_config('reg_state', \local_ubionai\registration\state::AWAITING_CONSENT, 'local_ubionai');
         }
