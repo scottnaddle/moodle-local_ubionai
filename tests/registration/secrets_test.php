@@ -155,7 +155,8 @@ final class secrets_test extends \advanced_testcase {
         $this->assertSame($mac, oauth::b64(hash_hmac('sha256', shared_secret_authenticator::MAC_PREFIX . $body, $key, true)));
         $this->assertSame($token, shared_secret_authenticator::sign_with_key($sorted, $key));
 
-        // The authenticator accepts the hub token with the stored secret.
+        // The authenticator accepts the hub token with the stored secret; the MAC key is bound to the vector site_key.
+        set_config('site_key', $sitekey, 'local_ubionai');
         secrets::store_next($secret, $version);
         secrets::promote_next();
         $this->assertEquals($claims, registrar::authenticator('shared_secret')->verify($token));

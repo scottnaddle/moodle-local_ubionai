@@ -336,7 +336,9 @@ final class registrar_test extends \advanced_testcase {
         $this->assertNull(secrets::next_version());
         $this->assertSame(registration_fake_hub::SECRET2, secrets::reveal('current'));
         $this->assertNull(secrets::mac_key(1));
-        $this->assertEmpty($this->hub->calls_to('register'), 'rotate needs no new callback');
+        // Only the initial registration called register; rotate is authenticated with the current secret.
+        $this->assertCount(1, $this->hub->calls_to('register'), 'rotate needs no new callback');
+        $this->assertCount(1, $this->hub->calls_to('rotate'));
     }
 
     /**
