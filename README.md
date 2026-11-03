@@ -300,6 +300,24 @@ Settings (all three required; values come from the hub operator):
   `base64url(json) . "." . base64url(HMAC-SHA256(secret, "ubionai-oauth-v1." . body))` with claims
   `typ`, `aud` (= `$CFG->wwwroot`), `site` and `exp`.
 
+## Hub self-registration: decisions of 2026-11-03 (contract §8.3)
+
+* **Default hub.** An empty `local_ubionai/hub_url` uses `https://mcp.ubion.global`
+  (`registrar::DEFAULT_HUB`). Administrators can set another hub URL.
+* **New sites** are created by the hub as `active` at the lowest tier (`limited`). The hub operator
+  can turn auto-activation off (the site then shows "pending") or disable a single site (the plugin
+  then reports `host_blocked`).
+* **Limits** come from hub configuration (provisional: 5 teachers, 200 requests per day). The plugin
+  shows `tenant.limits` exactly as the hub reports them (`max_teachers`, `daily_requests`,
+  `concurrency`, `llm_proxy`); it does not enforce them.
+* **Re-registration** always sends `site_identifier_hash`. The hub keeps teacher connections only
+  when it matches the recorded value; its `grants_kept` answer is shown on the connection page and
+  in `cli/register.php --status`.
+* **Operator-managed host**: `409 site_managed_by_operator`; the operator links the site by hand.
+* **Secrets**: HKDF / hash design unchanged. `tests/registration/secret_logging_test.php` checks that
+  no form of `site_secret` or the derived MAC key reaches output/mtrace, debugging, `error_log`,
+  log events or the config log.
+
 ## Privacy
 
 The plugin itself stores no personal data in Moodle and has no database tables or user preferences.

@@ -117,5 +117,19 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026110203, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026110300) {
+        // 0.7.0 (WP1): hub self-registration. auth_mode stays legacy_file; sites with a manual hub
+        // site id keep the manual flow (self_registration = 0). A site that already consented in
+        // the spike starts at "consented" and registers from the connection page or the CLI.
+        \local_ubionai\local\setup::ensure_defaults('upgrade');
+        if (
+            get_config('local_ubionai', 'consent') === 'accepted'
+                && \local_ubionai\registration\state::get() === \local_ubionai\registration\state::AWAITING_CONSENT
+        ) {
+            \local_ubionai\registration\state::set(\local_ubionai\registration\state::CONSENTED);
+        }
+        upgrade_plugin_savepoint(true, 2026110300, 'local', 'ubionai');
+    }
+
     return true;
 }

@@ -28,6 +28,8 @@ use local_ubionai\event\site_disconnected;
 use local_ubionai\form\connect_form;
 use local_ubionai\local\hub_client;
 use local_ubionai\local\provisioner;
+use local_ubionai\registration\registrar;
+use local_ubionai\registration\state;
 
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
@@ -136,6 +138,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && data_submitted()) {
         );
     }
 
+    if ($action === 'regretry' || $action === 'regrotate') {
+        if (!is_siteadmin()) {
+            throw new moodle_exception('reg_adminonly', 'local_ubionai');
+        }
+        $regstate = $action === 'regretry' ? registrar::retry() : registrar::rotate();
+        redirect(
+            $pageurl,
+            get_string('reg_result', 'local_ubionai', get_string('reg_state_' . $regstate, 'local_ubionai')),
+            null,
+            $regstate === state::REGISTERED ? notification::NOTIFY_SUCCESS : notification::NOTIFY_WARNING
+        );
+    }
+
     redirect($pageurl, get_string('invalidaction'), null, notification::NOTIFY_WARNING);
 }
 
@@ -151,6 +166,112 @@ $PAGE->set_title(get_string('connection', 'local_ubionai'));
 $PAGE->set_heading(get_string('connection', 'local_ubionai'));
 
 echo $OUTPUT->header();
+
+// Hub self-registration status (site administrators only).
+if (is_siteadmin()) {
+    $reg = registrar::status();
+    echo $OUTPUT->heading(get_string('reg_heading', 'local_ubionai'), 3);
+    if (!$reg['enabled']) {
+        echo $OUTPUT->notification(get_string('reg_disabled', 'local_ubionai'), notification::NOTIFY_INFO);
+    } else {
+        if ($reg['url_changed']) {
+            echo $OUTPUT->notification(get_string('reg_url_changed', 'local_ubionai'), notification::NOTIFY_WARNING);
+        }
+        if ($reg['retry_exhausted']) {
+            echo $OUTPUT->notification(get_string('reg_retry_exhausted', 'local_ubionai'), notification::NOTIFY_WARNING);
+        }
+        $regtable = new html_table();
+        $regtable->attributes['class'] = 'generaltable';
+        $regtable->data = [
+            [get_string('reg_state', 'local_ubionai'), get_string('reg_state_' . $reg['state'], 'local_ubionai')],
+            [get_string('reg_hub', 'local_ubionai'), s($reg['hub'] ?? '-')],
+        ];
+        if ($reg['site_key'] !== '') {
+            $regtable->data[] = [get_string('reg_site_key', 'local_ubionai'), s($reg['site_key'])];
+            $regtable->data[] = [get_string('reg_secret_version', 'local_ubionai'), (string) ($reg['secret_version'] ?? '-')];
+        }
+        if ($reg['state'] === state::REGISTERED && $reg['tenant_status'] === 'pending') {
+            echo $OUTPUT->notification(get_string('reg_tenant_pending', 'local_ubionai'), notification::NOTIFY_WARNING);
+        }
+        if ($reg['state'] === state::REGISTERED && $reg['grants_kept'] !== null) {
+            echo $OUTPUT->notification(
+                get_string($reg['grants_kept'] ? 'reg_grants_kept' : 'reg_grants_revoked', 'local_ubionai'),
+                $reg['grants_kept'] ? notification::NOTIFY_INFO : notification::NOTIFY_WARNING
+            );
+        }
+        if ($reg['tier'] !== '') {
+            $tierkey = 'reg_tier_' . $reg['tier'];
+            $statuskey = 'reg_tenant_status_' . $reg['tenant_status'];
+            $strings = get_string_manager();
+            $regtable->data[] = [get_string('reg_tier', 'local_ubionai'),
+                $strings->string_exists($tierkey, 'local_ubionai') ? get_string($tierkey, 'local_ubionai') : s($reg['tier'])];
+            $regtable->data[] = [get_string('reg_tenant_status', 'local_ubionai'),
+                $strings->string_exists($statuskey, 'local_ubionai')
+                    ? get_string($statuskey, 'local_ubionai') : s($reg['tenant_status'])];
+        }
+        if ($reg['limits']) {
+            $limits = array_map('s', registrar::describe_limits($reg['limits']));
+            $regtable->data[] = [get_string('reg_limits', 'local_ubionai'),
+                implode('<br>', $limits) . html_writer::div(get_string('reg_limits_help', 'local_ubionai'), 'form-text text-muted')];
+        }
+        if ($reg['registered_at']) {
+            $regtable->data[] = [get_string('reg_registered_at', 'local_ubionai'), userdate($reg['registered_at'])];
+        }
+        if ($reg['last_error'] !== '' && $reg['state'] !== state::REGISTERED) {
+            $errorkey = 'reg_error_' . $reg['last_error'];
+            $regtable->data[] = [get_string('reg_last_error', 'local_ubionai'),
+                (get_string_manager()->string_exists($errorkey, 'local_ubionai')
+                    ? get_string($errorkey, 'local_ubionai') : '') . ' (' . s($reg['last_error']) . ')'];
+        }
+        if ($reg['last_attempt_at']) {
+            $regtable->data[] = [get_string('reg_last_attempt', 'local_ubionai'), userdate($reg['last_attempt_at'])];
+        }
+        if ($reg['next_retry_at'] && $reg['state'] === state::FAILED_RETRYABLE) {
+            $regtable->data[] = [get_string('reg_next_retry', 'local_ubionai'), userdate($reg['next_retry_at'])];
+        }
+        $teacherurl = $reg['mcp_url'] !== '' ? $reg['mcp_url'] : $reg['legacy_mcp_url'];
+        if ($teacherurl !== '' && $reg['state'] === state::REGISTERED) {
+            $copy = html_writer::empty_tag('input', [
+                'type' => 'text', 'readonly' => 'readonly', 'id' => 'local_ubionai_mcp_url',
+                'class' => 'form-control d-inline-block w-75', 'value' => $teacherurl,
+            ]) . ' ' . html_writer::tag('button', get_string('reg_copy', 'local_ubionai'), [
+                'type' => 'button', 'class' => 'btn btn-secondary',
+                'data-action' => 'copytoclipboard', 'data-clipboard-target' => '#local_ubionai_mcp_url',
+            ]) . html_writer::div(get_string('reg_mcp_url_help', 'local_ubionai'), 'form-text text-muted');
+            $regtable->data[] = [get_string('reg_mcp_url', 'local_ubionai'), $copy];
+            $PAGE->requires->js_amd_inline("require(['core/copy_to_clipboard']);");
+        }
+        echo html_writer::table($regtable);
+        if ($reg['egress_ips']) {
+            echo $OUTPUT->notification(
+                get_string('reg_egress', 'local_ubionai', s(implode(', ', $reg['egress_ips']))),
+                notification::NOTIFY_INFO
+            );
+        }
+        if ($reg['state'] !== state::REGISTERED) {
+            echo $OUTPUT->notification(get_string('reg_maintenance_note', 'local_ubionai'), notification::NOTIFY_INFO);
+        }
+
+        echo html_writer::start_div('local_ubionai_regactions mb-4');
+        if ($reg['state'] !== state::AWAITING_CONSENT && $reg['state'] !== state::DEREGISTERED) {
+            echo $OUTPUT->render(new single_button(
+                new moodle_url($pageurl, ['action' => 'regretry']),
+                get_string('reg_retry', 'local_ubionai'),
+                'post'
+            ));
+        }
+        if ($reg['state'] === state::REGISTERED) {
+            $rotatebutton = new single_button(
+                new moodle_url($pageurl, ['action' => 'regrotate']),
+                get_string('reg_rotate', 'local_ubionai'),
+                'post'
+            );
+            $rotatebutton->add_confirm_action(get_string('reg_rotate_confirm', 'local_ubionai'));
+            echo $OUTPUT->render($rotatebutton);
+        }
+        echo html_writer::end_div();
+    }
+}
 
 if ($status['token_count'] > 0 && !$status['hub_configured']) {
     echo $OUTPUT->notification(

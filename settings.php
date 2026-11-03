@@ -62,12 +62,20 @@ if ($hassiteconfig) {
     );
     $consent->set_updatedcallback('\\local_ubionai\\local\\setup::consent_updated');
     $page->add($consent);
+    // Empty = registrar::DEFAULT_HUB, the default hub (§8.3 #6); admins may override it here.
     $page->add(new local_ubionai_admin_setting_hub_url(
         'local_ubionai/hub_url',
         get_string('hub_url', 'local_ubionai'),
         get_string('hub_url_desc', 'local_ubionai'),
         '',
         PARAM_URL
+    ));
+    // WP1/WP4: automatic self-registration on consent. Off keeps only the manual (legacy) flow.
+    $page->add(new admin_setting_configcheckbox(
+        'local_ubionai/self_registration',
+        get_string('self_registration', 'local_ubionai'),
+        get_string('self_registration_desc', 'local_ubionai'),
+        1
     ));
     // Easy Connect spike 2: per-user OAuth through the hub. Both values come from the hub operator.
     $page->add(new admin_setting_configtext(
