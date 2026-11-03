@@ -226,6 +226,7 @@ final class registrar_test extends \advanced_testcase {
             'mismatch' => [422, 'callback_mismatch', state::FAILED_ACTION_REQUIRED],
             'redirected' => [422, 'callback_redirected', state::FAILED_ACTION_REQUIRED],
             'operator' => [409, 'site_managed_by_operator', state::FAILED_ACTION_REQUIRED],
+            'disabled by operator' => [403, 'host_blocked', state::FAILED_ACTION_REQUIRED],
             'upgrade' => [426, 'plugin_upgrade_required', state::FAILED_ACTION_REQUIRED],
             'private' => [403, 'private_address_not_supported', state::UNSUPPORTED_PRIVATE],
         ];
@@ -377,6 +378,92 @@ final class registrar_test extends \advanced_testcase {
         setup::consent_updated('s_local_ubionai_consent');
         $this->assertSame(state::CONSENTED, state::get());
         $this->assertCount($calls, $this->hub->calls);
+    }
+
+    /**
+     * An empty hub_url uses the provisional default hub; the setting overrides it.
+     */
+    public function test_default_hub_is_provisional_and_overridable(): void {
+        $this->assertSame('https://mcp.ubion.global', registrar::DEFAULT_HUB);
+        set_config('hub_url', '', 'local_ubionai');
+        $this->assertSame('https://mcp.ubion.global', registrar::hub_base());
+        set_config('hub_url', 'https://hub.school.example/', 'local_ubionai');
+        $this->assertSame('https://hub.school.example', registrar::hub_base());
+        $this->assertStringContainsString('https://mcp.ubion.global', get_string('hub_url_desc', 'local_ubionai'));
+        $this->assertStringContainsString('provisional', get_string('hub_url_desc', 'local_ubionai'));
+    }
+
+    /**
+     * Re-registration sends the same site identity; the hub's grants_kept answer is recorded and shown.
+     */
+    public function test_reregistration_reports_grants_kept(): void {
+        $this->queue_success(201);
+        $this->assertSame(state::REGISTERED, registrar::register());
+        $this->assertNull(registrar::status()['grants_kept'], 'a new tenant has no grants to keep');
+
+        // Same Moodle (same site_identifier_hash): the hub keeps the teacher grants.
+        $same = registration_fake_hub::issued(2, registration_fake_hub::SECRET2) + ['grants_kept' => true];
+        $this->hub->queue('register', 200, $same)
+            ->queue('confirm', 200, ['secret_version' => 2, 'secret_state' => 'current']);
+        $this->assertSame(state::REGISTERED, registrar::register());
+        $this->assertTrue(registrar::status()['grants_kept']);
+
+        // The hub decided the identity differs: every grant was revoked.
+        $other = registration_fake_hub::issued(3) + ['grants_kept' => false];
+        $this->hub->queue('register', 200, $other)
+            ->queue('confirm', 200, ['secret_version' => 3, 'secret_state' => 'current']);
+        $this->assertSame(state::REGISTERED, registrar::register());
+        $this->assertFalse(registrar::status()['grants_kept']);
+
+        $requests = array_map(static function (array $call): array {
+            return json_decode($call['body'], true);
+        }, $this->hub->calls_to('register'));
+        $this->assertCount(3, $requests);
+        foreach ($requests as $request) {
+            $this->assertSame(registrar::site_identifier_hash(), $request['site_identifier_hash']);
+            $this->assertMatchesRegularExpression('/\A[0-9a-f]{64}\z/', $request['site_identifier_hash']);
+        }
+
+        // Rotate does not touch grants: the last re-registration result stays visible.
+        $this->hub->queue('rotate', 200, registration_fake_hub::issued(4, registration_fake_hub::SECRET2))
+            ->queue('confirm', 200, ['secret_version' => 4, 'secret_state' => 'current']);
+        $this->assertSame(state::REGISTERED, registrar::rotate());
+        $this->assertFalse(registrar::status()['grants_kept']);
+
+        // Withdrawal forgets it.
+        $this->hub->queue('deregister', 200, ['status' => 'disabled']);
+        set_config('consent', 'declined', 'local_ubionai');
+        setup::consent_updated('s_local_ubionai_consent');
+        $this->assertNull(registrar::status()['grants_kept']);
+    }
+
+    /**
+     * The hub's provisional limits and tenant status are stored and shown as reported.
+     */
+    public function test_limits_and_pending_tenant_from_hub(): void {
+        $issued = registration_fake_hub::issued();
+        $issued['tenant']['status'] = 'pending';
+        $issued['tenant']['limits'] = ['max_teachers' => 7, 'daily_requests' => 900, 'concurrency' => 1,
+            'llm_proxy' => false, 'future_limit' => 3, 'Bad-Key' => 1, 'nested' => ['x' => 1]];
+        $this->hub->queue('register', 201, $issued)
+            ->queue('confirm', 200, ['secret_version' => 1, 'secret_state' => 'current']);
+        $this->assertSame(state::REGISTERED, registrar::register());
+
+        $status = registrar::status();
+        $this->assertSame('limited', $status['tier']);
+        $this->assertSame('pending', $status['tenant_status']);
+        $this->assertSame(['max_teachers' => 7, 'daily_requests' => 900, 'concurrency' => 1, 'llm_proxy' => false,
+            'future_limit' => 3], $status['limits']);
+
+        $this->assertSame([
+            get_string('reg_limit_max_teachers', 'local_ubionai', '7'),
+            get_string('reg_limit_daily_requests', 'local_ubionai', '900'),
+            get_string('reg_limit_concurrency', 'local_ubionai', '1'),
+            get_string('reg_limit_llm_proxy', 'local_ubionai', get_string('no')),
+            'future_limit: 3',
+        ], registrar::describe_limits($status['limits']));
+        $this->assertSame('Teachers: 7', registrar::describe_limits(['max_teachers' => 7])[0]);
+        $this->assertSame('Requests per day: 900', registrar::describe_limits(['daily_requests' => 900])[0]);
     }
 
     /**

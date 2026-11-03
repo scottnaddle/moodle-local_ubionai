@@ -190,16 +190,29 @@ if (is_siteadmin()) {
             $regtable->data[] = [get_string('reg_site_key', 'local_ubionai'), s($reg['site_key'])];
             $regtable->data[] = [get_string('reg_secret_version', 'local_ubionai'), (string) ($reg['secret_version'] ?? '-')];
         }
+        if ($reg['state'] === state::REGISTERED && $reg['tenant_status'] === 'pending') {
+            echo $OUTPUT->notification(get_string('reg_tenant_pending', 'local_ubionai'), notification::NOTIFY_WARNING);
+        }
+        if ($reg['state'] === state::REGISTERED && $reg['grants_kept'] !== null) {
+            echo $OUTPUT->notification(
+                get_string($reg['grants_kept'] ? 'reg_grants_kept' : 'reg_grants_revoked', 'local_ubionai'),
+                $reg['grants_kept'] ? notification::NOTIFY_INFO : notification::NOTIFY_WARNING
+            );
+        }
         if ($reg['tier'] !== '') {
-            $regtable->data[] = [get_string('reg_tier', 'local_ubionai'), s($reg['tier'])];
-            $regtable->data[] = [get_string('reg_tenant_status', 'local_ubionai'), s($reg['tenant_status'])];
+            $tierkey = 'reg_tier_' . $reg['tier'];
+            $statuskey = 'reg_tenant_status_' . $reg['tenant_status'];
+            $strings = get_string_manager();
+            $regtable->data[] = [get_string('reg_tier', 'local_ubionai'),
+                $strings->string_exists($tierkey, 'local_ubionai') ? get_string($tierkey, 'local_ubionai') : s($reg['tier'])];
+            $regtable->data[] = [get_string('reg_tenant_status', 'local_ubionai'),
+                $strings->string_exists($statuskey, 'local_ubionai')
+                    ? get_string($statuskey, 'local_ubionai') : s($reg['tenant_status'])];
         }
         if ($reg['limits']) {
-            $limits = [];
-            foreach ($reg['limits'] as $name => $value) {
-                $limits[] = s($name) . ': ' . s(is_bool($value) ? ($value ? 'true' : 'false') : (string) $value);
-            }
-            $regtable->data[] = [get_string('reg_limits', 'local_ubionai'), implode(', ', $limits)];
+            $limits = array_map('s', registrar::describe_limits($reg['limits']));
+            $regtable->data[] = [get_string('reg_limits', 'local_ubionai'),
+                implode('<br>', $limits) . html_writer::div(get_string('reg_limits_help', 'local_ubionai'), 'form-text text-muted')];
         }
         if ($reg['registered_at']) {
             $regtable->data[] = [get_string('reg_registered_at', 'local_ubionai'), userdate($reg['registered_at'])];

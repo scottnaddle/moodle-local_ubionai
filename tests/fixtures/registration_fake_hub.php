@@ -91,7 +91,8 @@ class registration_fake_hub extends hub_api {
             'confirm_url' => self::BASE . "/api/v1/sites/{$key}/confirm",
             'tenant' => [
                 'status' => 'active', 'tier' => 'limited',
-                'limits' => ['max_teachers' => 5, 'daily_tool_calls' => 300, 'concurrency' => 1, 'llm_proxy' => false],
+                // Same shape as the hub's TierLimits.describe() (provisional defaults, §8.3 #2).
+                'limits' => ['max_teachers' => 5, 'daily_requests' => 200, 'concurrency' => 1, 'llm_proxy' => false],
             ],
             'mcp_url' => self::BASE . '/m/www.example.com/moodle/mcp',
             'legacy_mcp_url' => self::BASE . "/t/{$key}/mcp",

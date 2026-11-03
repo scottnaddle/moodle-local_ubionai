@@ -62,6 +62,7 @@ if ($hassiteconfig) {
     );
     $consent->set_updatedcallback('\\local_ubionai\\local\\setup::consent_updated');
     $page->add($consent);
+    // Empty = registrar::DEFAULT_HUB, a provisional (temporary) default hub (§8.3 #6); admins may override it here.
     $page->add(new local_ubionai_admin_setting_hub_url(
         'local_ubionai/hub_url',
         get_string('hub_url', 'local_ubionai'),

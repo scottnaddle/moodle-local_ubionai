@@ -33,8 +33,15 @@ use local_ubionai\local\oauth;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class registrar {
-    /** Official hub, used when the advanced hub_url setting is empty. */
-    public const DEFAULT_HUB = 'https://mcp.ubion.ai';
+    /**
+     * Provisional (temporary) default hub, used when the advanced hub_url setting is empty.
+     *
+     * Decided 2026-11-03 (Scott, contract §8.3 #6): not final; site administrators can override
+     * it with the hub_url plugin setting.
+     */
+    public const DEFAULT_HUB = 'https://mcp.ubion.global';
+    /** Limit names the hub reports in tenant.limits (decided 2026-11-03, §8.3 #2) with a language string. */
+    public const KNOWN_LIMITS = ['max_teachers', 'daily_requests', 'concurrency', 'llm_proxy'];
     /** Terms / privacy notice version the consent screen shows. */
     public const TERMS_VERSION = '2026-11-01';
     /** Consent scopes of v1. */
@@ -246,7 +253,28 @@ class registrar {
             'registered_at' => (int) ($cfg->registered_at ?? 0) ?: null,
             'url_changed' => $registeredurl !== '' && $registeredurl !== (string) $CFG->wwwroot,
             'auth_mode' => (string) ($cfg->auth_mode ?? 'legacy_file'),
+            'grants_kept' => isset($cfg->grants_kept) ? (bool) $cfg->grants_kept : null,
         ];
+    }
+
+    /**
+     * Human readable limits of the hub tenant (values exactly as the hub reported them).
+     *
+     * @param array $limits tenant.limits as stored
+     * @return string[] one "label: value" line per limit
+     */
+    public static function describe_limits(array $limits): array {
+        $lines = [];
+        foreach ($limits as $name => $value) {
+            if (is_bool($value)) {
+                $value = get_string($value ? 'yes' : 'no');
+            }
+            $value = (string) $value;
+            $lines[] = in_array($name, self::KNOWN_LIMITS, true)
+                ? get_string('reg_limit_' . $name, 'local_ubionai', $value)
+                : $name . ': ' . $value;
+        }
+        return $lines;
     }
 
     /**
@@ -355,6 +383,7 @@ class registrar {
                 'branch' => (string) $CFG->branch,
             ],
             'plugin' => ['component' => 'local_ubionai', 'version' => $info['version'], 'release' => $info['release']],
+            // Site identity for re-registration (§8.3 #3): the hub keeps teacher grants only when it matches.
             'site_identifier_hash' => self::site_identifier_hash(),
             'callback_nonce' => $nonce,
             'challenge_sha256' => self::challenge_sha256($challenge),
@@ -433,6 +462,13 @@ class registrar {
         foreach (['allowed_callbacks', 'issuers', 'limits', 'egress_ips'] as $name) {
             set_config($name, json_encode($issued[$name] ?? []), 'local_ubionai');
         }
+        if (array_key_exists('grants_kept', $issued)) {
+            if ($issued['grants_kept'] === null) {
+                unset_config('grants_kept', 'local_ubionai');
+            } else {
+                set_config('grants_kept', (int) $issued['grants_kept'], 'local_ubionai');
+            }
+        }
         set_config('registered_at', time(), 'local_ubionai');
         set_config('reg_site_url', (string) $CFG->wwwroot, 'local_ubionai');
         unset_config('reg_issued', 'local_ubionai');
@@ -458,6 +494,11 @@ class registrar {
                 || ($phase === 'rotate' && $issued['site_key'] !== (string) get_config('local_ubionai', 'site_key'))
         ) {
             return self::failure(['httpcode' => 200, 'data' => ['error' => 'bad_response'], 'errno' => 0], $phase);
+        }
+        if ($phase === 'register') {
+            // Decided 2026-11-03 (§8.3 #3): a re-registration (200) says whether the hub kept the teacher
+            // grants (same site_identifier_hash) or revoked them all; a new tenant (201) has none.
+            $issued['grants_kept'] = is_bool($data['grants_kept'] ?? null) ? $data['grants_kept'] : null;
         }
         secrets::store_next($data['site_secret'], $issued['secret_version']);
         unset($data['site_secret']);
@@ -627,7 +668,7 @@ class registrar {
         }
         unset($secret);
         secrets::clear();
-        foreach (['reg_pending', 'reg_issued', 'last_error', 'registered_at', 'consent_accepted_at'] as $name) {
+        foreach (['reg_pending', 'reg_issued', 'last_error', 'registered_at', 'consent_accepted_at', 'grants_kept'] as $name) {
             unset_config($name, 'local_ubionai');
         }
         self::clear_schedule();
