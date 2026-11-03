@@ -57,6 +57,18 @@ class setup {
         if (get_config('local_ubionai', 'connect_state') === false) {
             set_config('connect_state', 'awaiting_consent', 'local_ubionai');
         }
+        // Self-registration (WP1). Message auth of oauth.php stays legacy_file until WP4 switches it.
+        if (get_config('local_ubionai', 'reg_state') === false) {
+            set_config('reg_state', \local_ubionai\registration\state::AWAITING_CONSENT, 'local_ubionai');
+        }
+        if (get_config('local_ubionai', 'auth_mode') === false) {
+            set_config('auth_mode', 'legacy_file', 'local_ubionai');
+        }
+        if (get_config('local_ubionai', 'self_registration') === false) {
+            // Sites already set up by the hub operator (0.6.x) keep the manual flow.
+            $legacy = trim((string) get_config('local_ubionai', 'hub_site_id')) !== '';
+            set_config('self_registration', $legacy ? 0 : 1, 'local_ubionai');
+        }
         // Spike evidence: who/where ran the hook.
         set_config('spike_install_trace', json_encode([
             'where' => $where, 'time' => time(), 'cli' => CLI_SCRIPT,
@@ -82,6 +94,7 @@ class setup {
         ]), 'local_ubionai');
         if ($value !== 'accepted') {
             set_config('connect_state', $value === 'declined' ? 'declined' : 'awaiting_consent', 'local_ubionai');
+            \local_ubionai\registration\registrar::consent_updated($value);
             return;
         }
         set_config('enablewebservices', 1);
@@ -90,7 +103,8 @@ class setup {
             $protocols[] = 'rest';
             set_config('webserviceprotocols', implode(',', $protocols));
         }
-        // Real implementation: signed self-registration to the hub here (sync), adhoc retry on failure.
         set_config('connect_state', 'consented_registration_pending', 'local_ubionai');
+        // One synchronous self-registration attempt; failures are retried by an adhoc task.
+        \local_ubionai\registration\registrar::consent_updated($value);
     }
 }

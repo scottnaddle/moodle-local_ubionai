@@ -69,6 +69,13 @@ if ($hassiteconfig) {
         '',
         PARAM_URL
     ));
+    // WP1/WP4: automatic self-registration on consent. Off keeps only the manual (legacy) flow.
+    $page->add(new admin_setting_configcheckbox(
+        'local_ubionai/self_registration',
+        get_string('self_registration', 'local_ubionai'),
+        get_string('self_registration_desc', 'local_ubionai'),
+        1
+    ));
     // Easy Connect spike 2: per-user OAuth through the hub. Both values come from the hub operator.
     $page->add(new admin_setting_configtext(
         'local_ubionai/hub_site_id',

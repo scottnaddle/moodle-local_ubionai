@@ -46,6 +46,9 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
             'forumauthors' => 'privacy:metadata:ubionai_hub:forumauthors',
             'coursecontent' => 'privacy:metadata:ubionai_hub:coursecontent',
             'prompts' => 'privacy:metadata:ubionai_hub:prompts',
+            // Site self-registration: the site URL and the consent record (no administrator data).
+            'siteurl' => 'privacy:metadata:ubionai_hub:siteurl',
+            'consent' => 'privacy:metadata:ubionai_hub:consent',
         ], 'privacy:metadata:ubionai_hub');
         // Ephemeral: a code lives at most two minutes and is deleted when the hub redeems it.
         $collection->add_database_table('local_ubionai_codes', [
