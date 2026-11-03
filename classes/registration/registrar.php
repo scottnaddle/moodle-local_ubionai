@@ -46,6 +46,8 @@ class registrar {
 
     /** @var hub_api|null transport override for unit tests */
     private static $api = null;
+    /** @var bool true while the adhoc retry task runs */
+    private static $intask = false;
 
     /**
      * Whether the new self-registration flow is switched on (WP4 flag, legacy flow untouched).
@@ -167,24 +169,38 @@ class registrar {
      * @return string resulting state
      */
     public static function run_scheduled(): string {
-        return self::locked(function (): string {
-            if (state::get() !== state::FAILED_RETRYABLE) {
-                return state::get();
-            }
-            $due = (int) get_config('local_ubionai', 'next_retry_at');
-            if ($due > time()) {
-                self::queue_task($due);
-                return state::get();
-            }
-            $action = (string) get_config('local_ubionai', 'reg_retry_action');
-            if ($action === 'confirm' && secrets::has('next')) {
-                return self::do_confirm();
-            }
-            if ($action === 'rotate' && secrets::has('current')) {
-                return self::do_rotate();
-            }
-            return self::do_register();
-        });
+        self::$intask = true;
+        try {
+            return self::locked(function (): string {
+                return self::run_due();
+            });
+        } finally {
+            self::$intask = false;
+        }
+    }
+
+    /**
+     * Run the due retry step (inside the lock).
+     *
+     * @return string resulting state
+     */
+    private static function run_due(): string {
+        if (state::get() !== state::FAILED_RETRYABLE) {
+            return state::get();
+        }
+        $due = (int) get_config('local_ubionai', 'next_retry_at');
+        if ($due > time()) {
+            self::queue_task($due);
+            return state::get();
+        }
+        $action = (string) get_config('local_ubionai', 'reg_retry_action');
+        if ($action === 'confirm' && secrets::has('next')) {
+            return self::do_confirm();
+        }
+        if ($action === 'rotate' && secrets::has('current')) {
+            return self::do_rotate();
+        }
+        return self::do_register();
     }
 
     /**
@@ -623,8 +639,14 @@ class registrar {
      */
     private static function queue_task(int $when): void {
         $task = new \local_ubionai\task\retry_registration();
+        $task->set_custom_data(['v' => 1]);
         $task->set_next_run_time($when);
-        \core\task\manager::reschedule_or_queue_adhoc_task($task);
+        if (self::$intask) {
+            // The running task row is deleted when it finishes, so it must not be the one moved.
+            \core\task\manager::queue_adhoc_task($task);
+        } else {
+            \core\task\manager::reschedule_or_queue_adhoc_task($task);
+        }
     }
 
     /**
