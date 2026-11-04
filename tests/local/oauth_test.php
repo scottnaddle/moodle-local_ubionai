@@ -213,9 +213,10 @@ final class oauth_test extends \advanced_testcase {
     }
 
     /**
-     * The ubionai_user service cannot create courses or enrol users (no course creation via MCP).
+     * The ubionai_user service whitelists the course-authoring helpers the teacher's token may call,
+     * and cannot create courses or enrol users (no course creation via MCP).
      */
-    public function test_user_service_excludes_course_creation(): void {
+    public function test_user_service_function_list(): void {
         global $DB;
         $service = $DB->get_record('external_services', ['shortname' => oauth::SERVICE], '*', MUST_EXIST);
         $functions = $DB->get_fieldset_select(
@@ -225,6 +226,8 @@ final class oauth_test extends \advanced_testcase {
             [$service->id]
         );
         $this->assertContains('core_course_get_contents', $functions);
+        $this->assertContains('local_ubionai_add_sections', $functions);
+        $this->assertContains('local_ubionai_add_quiz_questions', $functions);
         $this->assertNotContains('core_course_create_courses', $functions);
         $this->assertNotContains('enrol_manual_enrol_users', $functions);
     }
