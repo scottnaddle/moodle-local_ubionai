@@ -121,6 +121,26 @@ unknown section numbers raise `invalid_parameter_exception`. Requires `moodle/co
 `names` by position). Appends the sections to the end of the course (at most 50 per call).
 Returns `{sections: [{id, section}]}`. Requires `moodle/course:update`.
 
+### `local_ubionai_delete_modules`
+
+`courseid`, `cmids` (list of course module ids). Deletes each activity with
+`course_delete_module($cmid, true)`: asynchronously when a plugin (the recycle bin) supports it,
+synchronously otherwise. Modules that do not exist or belong to another course are reported in
+`failed` instead of aborting the batch; duplicate ids are processed once. Returns
+`{deleted: [{cmid, name, modname}], failed: [{cmid, reason}]}`. Requires
+`moodle/course:manageactivities` in the course and in each module context.
+
+### `local_ubionai_delete_sections`
+
+`courseid`, `sectionnums` (list of section numbers). Deletes the sections from the highest number
+to the lowest (deleting a section renumbers the ones above it) with
+`course_delete_section($course, $sectionnum, true, true)`, including their activities. Section 0
+is always rejected, and sections that do not belong to the course are reported in `failed`.
+Returns `{deleted: [{sectionnum, name, modules: [{cmid, name, modname}]}],
+failed: [{sectionnum, reason}]}`. Requires `moodle/course:update` and
+`moodle/course:manageactivities` in the course context, and `moodle/course:manageactivities` in
+each contained module's context.
+
 ### `local_ubionai_set_section_availability`
 
 `courseid`, `section` (number), `availability` (core_availability JSON tree; `''` = no restrictions).
@@ -354,6 +374,15 @@ Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 4.5 LTS,
 Moodle 4.5 LTS ~ 5.3), then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.7.4 (2026110501)
+
+* New write functions `local_ubionai_delete_modules` and `local_ubionai_delete_sections`, also
+  declared on the `ubionai_user` service. Both delete asynchronously when the recycle bin supports
+  it, report failures per item instead of aborting the batch, and leave section numbers stable by
+  deleting from the highest section number down.
+* New tests: `tests/external/delete_modules_test.php` and
+  `tests/external/delete_sections_test.php`.
 
 ### 0.7.2 (2026110302)
 
