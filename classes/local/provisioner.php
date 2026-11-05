@@ -77,8 +77,6 @@ class provisioner {
         'moodle/badges:awardbadge',
         'moodle/course:view',
         'mod/assign:view',
-        'mod/assign:grade',
-        'mod/quiz:grade',
     ];
 
     /** @var string[] Web service functions exposed to the MCP server. */
