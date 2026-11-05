@@ -138,5 +138,12 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026110500, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026110501) {
+        // 0.7.4: no data change. local_ubionai_delete_modules and local_ubionai_delete_sections are
+        // now declared on the ubionai_user service; core attaches them to the existing service after
+        // this hook (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026110501, 'local', 'ubionai');
+    }
+
     return true;
 }

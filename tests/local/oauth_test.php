@@ -228,6 +228,8 @@ final class oauth_test extends \advanced_testcase {
         $this->assertContains('core_course_get_contents', $functions);
         $this->assertContains('local_ubionai_add_sections', $functions);
         $this->assertContains('local_ubionai_add_quiz_questions', $functions);
+        $this->assertContains('local_ubionai_delete_modules', $functions);
+        $this->assertContains('local_ubionai_delete_sections', $functions);
         $this->assertNotContains('core_course_create_courses', $functions);
         $this->assertNotContains('enrol_manual_enrol_users', $functions);
     }

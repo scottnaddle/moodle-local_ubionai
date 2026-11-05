@@ -38,6 +38,13 @@ $functions = [
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities',
     ],
+    'local_ubionai_delete_modules' => [
+        'classname' => 'local_ubionai\external\delete_modules',
+        'description' => 'Delete activities from a course, reporting per-module failures instead of aborting the batch.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:manageactivities',
+        'ajax' => true,
+    ],
     'local_ubionai_add_quiz_questions' => [
         'classname' => 'local_ubionai\external\add_quiz_questions',
         'description' => 'Create questions in the quiz question bank and add them to the quiz.',
@@ -55,6 +62,13 @@ $functions = [
         'description' => 'Append named sections to a course.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
+    ],
+    'local_ubionai_delete_sections' => [
+        'classname' => 'local_ubionai\external\delete_sections',
+        'description' => 'Delete sections and their activities from a course, reporting per-section failures.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:update, moodle/course:manageactivities',
+        'ajax' => true,
     ],
     'local_ubionai_set_section_availability' => [
         'classname' => 'local_ubionai\external\set_section_availability',
@@ -114,8 +128,10 @@ $services = [
             'mod_assign_save_grade',
             'local_ubionai_create_module',
             'local_ubionai_update_module',
+            'local_ubionai_delete_modules',
             'local_ubionai_add_quiz_questions',
             'local_ubionai_add_sections',
+            'local_ubionai_delete_sections',
             'local_ubionai_get_course_assignments',
             'local_ubionai_list_course_assignments',
         ],
