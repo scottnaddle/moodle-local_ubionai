@@ -260,3 +260,19 @@ $string['cli_register_usage'] = 'Usage:
 --status  show the registration state (no secrets)
 --retry   register now (or confirm a pending secret), restarting the retry schedule
 --rotate  ask the hub for a new site secret and confirm it';
+
+// Grading functions.
+$string['errorassignnotincourse'] = 'The assignment does not belong to this course.';
+$string['errorassignnograde'] = 'The assignment has no grade item to grade.';
+$string['errorquiznotincourse'] = 'The quiz does not belong to this course.';
+$string['errorinvalidgradesjson'] = 'The grades payload is not a valid JSON array.';
+$string['errorinvaliduserid'] = 'The user id is missing or the user does not exist.';
+$string['errorusernotenrolled'] = 'The user is not enrolled in the course and has no submission.';
+$string['errorgradeoutofrange'] = 'The grade {$a->grade} is outside the allowed range 0 to {$a->max}.';
+$string['errorinvalidattempt'] = 'The attempt id is missing.';
+$string['errorinvalidslot'] = 'The question slot is missing or does not belong to the attempt.';
+$string['errorinvalidmark'] = 'The mark is missing or not a number.';
+$string['errorattemptnotinquiz'] = 'The attempt does not belong to this quiz.';
+$string['errorattemptnotfinished'] = 'The attempt is not a finished attempt of this quiz.';
+$string['errorquestionnotgradable'] = 'The question is not waiting for manual grading.';
+$string['errormarkoutofrange'] = 'The mark {$a->mark} is outside the allowed range 0 to {$a->max}.';
