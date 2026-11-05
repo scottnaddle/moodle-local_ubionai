@@ -108,6 +108,32 @@ $functions = [
         'type' => 'read',
         'capabilities' => 'moodle/course:view, mod/assign:view',
     ],
+    'local_ubionai_get_submissions' => [
+        'classname' => 'local_ubionai\external\get_submissions',
+        'description' => 'Read the latest submitted attempt of each user of an assignment, ' .
+            'with online text, extracted file text, rubric/guide and current grade.',
+        'type' => 'read',
+        'capabilities' => 'mod/assign:grade',
+    ],
+    'local_ubionai_save_grades' => [
+        'classname' => 'local_ubionai\external\save_grades',
+        'description' => 'Save assignment grades and feedback comments for several users.',
+        'type' => 'write',
+        'capabilities' => 'mod/assign:grade',
+    ],
+    'local_ubionai_get_quiz_attempts_for_grading' => [
+        'classname' => 'local_ubionai\external\get_quiz_attempts_for_grading',
+        'description' => 'List finished quiz attempts with question slots that need manual grading ' .
+            'or were manually graded.',
+        'type' => 'read',
+        'capabilities' => 'mod/quiz:grade',
+    ],
+    'local_ubionai_save_quiz_grades' => [
+        'classname' => 'local_ubionai\external\save_quiz_grades',
+        'description' => 'Save manual marks and comments for quiz question slots and recompute the quiz grades.',
+        'type' => 'write',
+        'capabilities' => 'mod/quiz:grade',
+    ],
 ];
 
 // Phase 0 spike: per-user service declared by the component. Core creates and syncs it on every
@@ -134,6 +160,10 @@ $services = [
             'local_ubionai_delete_sections',
             'local_ubionai_get_course_assignments',
             'local_ubionai_list_course_assignments',
+            'local_ubionai_get_submissions',
+            'local_ubionai_save_grades',
+            'local_ubionai_get_quiz_attempts_for_grading',
+            'local_ubionai_save_quiz_grades',
         ],
         'restrictedusers' => 1,
         'enabled' => 1,

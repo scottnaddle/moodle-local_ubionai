@@ -94,11 +94,13 @@ class provisioner {
         // Optional: mod_attendance. Skipped (and reported by name) when the plugin is absent.
         'mod_attendance_get_sessions', 'mod_attendance_get_session', 'mod_attendance_add_attendance',
         'mod_attendance_add_session', 'mod_attendance_update_user_status',
-        // Local plugin functions (11).
+        // Local plugin functions (15).
         'local_ubionai_create_module', 'local_ubionai_update_module', 'local_ubionai_add_quiz_questions',
         'local_ubionai_update_section', 'local_ubionai_add_sections', 'local_ubionai_set_section_availability',
         'local_ubionai_set_rubric', 'local_ubionai_set_grade_categories', 'local_ubionai_create_badge',
         'local_ubionai_get_course_assignments', 'local_ubionai_list_course_assignments',
+        'local_ubionai_get_submissions', 'local_ubionai_save_grades',
+        'local_ubionai_get_quiz_attempts_for_grading', 'local_ubionai_save_quiz_grades',
     ];
 
     /**

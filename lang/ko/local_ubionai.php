@@ -112,3 +112,19 @@ $string['reg_error_invalid_hub_url'] = '허브 URL 설정이 올바르지 않습
 $string['reg_error_plugin_error'] = '플러그인 내부 오류로 등록이 중단되었습니다. [다시 시도]를 누르고, 계속되면 디버깅 로그를 확인하세요.';
 $string['reg_error_retry_exhausted'] = '24시간 후 자동 재시도를 중단했습니다.';
 $string['reg_error_not_consented'] = '동의하지 않았습니다.';
+
+// Grading functions.
+$string['errorassignnotincourse'] = '이 과제는 이 강좌에 속하지 않습니다.';
+$string['errorassignnograde'] = '이 과제에는 성적을 매길 성적 항목이 없습니다.';
+$string['errorquiznotincourse'] = '이 퀴즈는 이 강좌에 속하지 않습니다.';
+$string['errorinvalidgradesjson'] = '성적 데이터가 올바른 JSON 배열이 아닙니다.';
+$string['errorinvaliduserid'] = '사용자 ID가 없거나 사용자가 존재하지 않습니다.';
+$string['errorusernotenrolled'] = '사용자가 강좌에 등록되지 않았고 제출물도 없습니다.';
+$string['errorgradeoutofrange'] = '성적 {$a->grade}이(가) 허용 범위 0~{$a->max}를 벗어났습니다.';
+$string['errorinvalidattempt'] = '응시 ID가 없습니다.';
+$string['errorinvalidslot'] = '문항 슬롯이 없거나 이 응시에 속하지 않습니다.';
+$string['errorinvalidmark'] = '점수가 없거나 숫자가 아닙니다.';
+$string['errorattemptnotinquiz'] = '이 응시는 이 퀴즈에 속하지 않습니다.';
+$string['errorattemptnotfinished'] = '이 응시는 이 퀴즈의 종료된 응시가 아닙니다.';
+$string['errorquestionnotgradable'] = '이 문항은 수동 채점 대상이 아닙니다.';
+$string['errormarkoutofrange'] = '점수 {$a->mark}이(가) 허용 범위 0~{$a->max}를 벗어났습니다.';
