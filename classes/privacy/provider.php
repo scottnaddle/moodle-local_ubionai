@@ -28,10 +28,7 @@ namespace local_ubionai\privacy;
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements
-        \core_privacy\local\metadata\provider,
-        \core_privacy\local\request\plugin\provider,
-        \core_privacy\local\request\core_userlist_provider {
+class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
     /**
      * Describe the external location that data is sent to.
      *
@@ -39,7 +36,8 @@ class provider implements
      * @return \core_privacy\local\metadata\collection
      */
     public static function get_metadata(
-            \core_privacy\local\metadata\collection $collection): \core_privacy\local\metadata\collection {
+        \core_privacy\local\metadata\collection $collection
+    ): \core_privacy\local\metadata\collection {
         $collection->add_external_location_link('ubionai_hub', [
             'fullname' => 'privacy:metadata:ubionai_hub:fullname',
             'email' => 'privacy:metadata:ubionai_hub:email',
@@ -48,7 +46,15 @@ class provider implements
             'forumauthors' => 'privacy:metadata:ubionai_hub:forumauthors',
             'coursecontent' => 'privacy:metadata:ubionai_hub:coursecontent',
             'prompts' => 'privacy:metadata:ubionai_hub:prompts',
+            // Site self-registration: the site URL and the consent record (no administrator data).
+            'siteurl' => 'privacy:metadata:ubionai_hub:siteurl',
+            'consent' => 'privacy:metadata:ubionai_hub:consent',
         ], 'privacy:metadata:ubionai_hub');
+        // Ephemeral: a code lives at most two minutes and is deleted when the hub redeems it.
+        $collection->add_database_table('local_ubionai_codes', [
+            'userid' => 'privacy:metadata:local_ubionai_codes:userid',
+            'timecreated' => 'privacy:metadata:local_ubionai_codes:timecreated',
+        ], 'privacy:metadata:local_ubionai_codes');
 
         return $collection;
     }
@@ -73,7 +79,8 @@ class provider implements
      * @param \core_privacy\local\request\approved_contextlist $contextlist the approved contexts
      */
     public static function export_user_data(
-            \core_privacy\local\request\approved_contextlist $contextlist): void {
+        \core_privacy\local\request\approved_contextlist $contextlist
+    ): void {
     }
 
     /**
@@ -94,7 +101,8 @@ class provider implements
      * @param \core_privacy\local\request\approved_contextlist $contextlist the approved contexts
      */
     public static function delete_data_for_user(
-            \core_privacy\local\request\approved_contextlist $contextlist): void {
+        \core_privacy\local\request\approved_contextlist $contextlist
+    ): void {
     }
 
     /**

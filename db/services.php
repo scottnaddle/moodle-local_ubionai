@@ -38,6 +38,13 @@ $functions = [
         'type' => 'write',
         'capabilities' => 'moodle/course:manageactivities',
     ],
+    'local_ubionai_delete_modules' => [
+        'classname' => 'local_ubionai\external\delete_modules',
+        'description' => 'Delete activities from a course, reporting per-module failures instead of aborting the batch.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:manageactivities',
+        'ajax' => true,
+    ],
     'local_ubionai_add_quiz_questions' => [
         'classname' => 'local_ubionai\external\add_quiz_questions',
         'description' => 'Create questions in the quiz question bank and add them to the quiz.',
@@ -55,6 +62,13 @@ $functions = [
         'description' => 'Append named sections to a course.',
         'type' => 'write',
         'capabilities' => 'moodle/course:update',
+    ],
+    'local_ubionai_delete_sections' => [
+        'classname' => 'local_ubionai\external\delete_sections',
+        'description' => 'Delete sections and their activities from a course, reporting per-section failures.',
+        'type' => 'write',
+        'capabilities' => 'moodle/course:update, moodle/course:manageactivities',
+        'ajax' => true,
     ],
     'local_ubionai_set_section_availability' => [
         'classname' => 'local_ubionai\external\set_section_availability',
@@ -93,5 +107,67 @@ $functions = [
             'no enrolment required.',
         'type' => 'read',
         'capabilities' => 'moodle/course:view, mod/assign:view',
+    ],
+    'local_ubionai_get_submissions' => [
+        'classname' => 'local_ubionai\external\get_submissions',
+        'description' => 'Read the latest submitted attempt of each user of an assignment, ' .
+            'with online text, extracted file text, rubric/guide and current grade.',
+        'type' => 'read',
+        'capabilities' => 'mod/assign:grade',
+    ],
+    'local_ubionai_save_grades' => [
+        'classname' => 'local_ubionai\external\save_grades',
+        'description' => 'Save assignment grades and feedback comments for several users.',
+        'type' => 'write',
+        'capabilities' => 'mod/assign:grade',
+    ],
+    'local_ubionai_get_quiz_attempts_for_grading' => [
+        'classname' => 'local_ubionai\external\get_quiz_attempts_for_grading',
+        'description' => 'List finished quiz attempts with question slots that need manual grading ' .
+            'or were manually graded.',
+        'type' => 'read',
+        'capabilities' => 'mod/quiz:grade',
+    ],
+    'local_ubionai_save_quiz_grades' => [
+        'classname' => 'local_ubionai\external\save_quiz_grades',
+        'description' => 'Save manual marks and comments for quiz question slots and recompute the quiz grades.',
+        'type' => 'write',
+        'capabilities' => 'mod/quiz:grade',
+    ],
+];
+
+// Phase 0 spike: per-user service declared by the component. Core creates and syncs it on every
+// install/upgrade (external_update_descriptions), after db/install.php has run. Teacher tokens are
+// minted for this service only; the function list is the whitelist.
+$services = [
+    'UBION AI (per-user)' => [
+        'shortname' => 'ubionai_user',
+        'functions' => [
+            'core_webservice_get_site_info',
+            'core_enrol_get_users_courses',
+            'core_course_get_courses_by_field',
+            'core_course_get_contents',
+            'core_enrol_get_enrolled_users',
+            'mod_assign_get_assignments',
+            'mod_assign_get_submissions',
+            'mod_assign_get_grades',
+            'mod_assign_save_grade',
+            'local_ubionai_create_module',
+            'local_ubionai_update_module',
+            'local_ubionai_delete_modules',
+            'local_ubionai_add_quiz_questions',
+            'local_ubionai_add_sections',
+            'local_ubionai_delete_sections',
+            'local_ubionai_get_course_assignments',
+            'local_ubionai_list_course_assignments',
+            'local_ubionai_get_submissions',
+            'local_ubionai_save_grades',
+            'local_ubionai_get_quiz_attempts_for_grading',
+            'local_ubionai_save_quiz_grades',
+        ],
+        'restrictedusers' => 1,
+        'enabled' => 1,
+        'downloadfiles' => 0,
+        'uploadfiles' => 0,
     ],
 ];

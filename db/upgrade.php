@@ -46,8 +46,10 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
                    AND qc.parent = (SELECT id FROM {question_categories}
                                      WHERE contextid = qc.contextid AND parent = 0)";
         foreach ($DB->get_records_sql($sql, ['contextlevel' => CONTEXT_MODULE]) as $cat) {
-            $conflict = $DB->record_exists('question_categories',
-                ['contextid' => $cat->contextid, 'name' => 'ubionai']);
+            $conflict = $DB->record_exists(
+                'question_categories',
+                ['contextid' => $cat->contextid, 'name' => 'ubionai']
+            );
             if (!$conflict) {
                 $DB->set_field('question_categories', 'name', 'ubionai', ['id' => $cat->id]);
             }
@@ -80,6 +82,67 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         // place unless --revoke-legacy is given. A token adopted by 0.5.0 stays tracked because it
         // cannot be told apart from one this plugin minted; the README describes how to rotate it.
         upgrade_plugin_savepoint(true, 2026103106, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110100) {
+        // 0.6.0 (Phase 0 spike): same zero-config defaults as a fresh install. The declared
+        // service ubionai_user is created by core after this hook (upgrade_component_updated).
+        \local_ubionai\local\setup::ensure_defaults('upgrade');
+        upgrade_plugin_savepoint(true, 2026110100, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110200) {
+        // Easy Connect spike 2: one-time codes for the hub's delegated OAuth login.
+        $dbman = $DB->get_manager();
+        $table = new xmldb_table('local_ubionai_codes');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('codehash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('state', XMLDB_TYPE_CHAR, '128', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timeexpires', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('userid', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        $table->add_index('codehash', XMLDB_INDEX_UNIQUE, ['codehash']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        upgrade_plugin_savepoint(true, 2026110200, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110203) {
+        // 0.6.1-spike4: no data change. core_course_create_courses and enrol_manual_enrol_users are
+        // no longer declared on ubionai_user (no course creation via MCP); core drops them from the
+        // service after this hook (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026110203, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110300) {
+        // 0.7.0 (WP1): hub self-registration. auth_mode stays legacy_file; sites with a manual hub
+        // site id keep the manual flow (self_registration = 0). A site that already consented in
+        // the spike starts at "consented" and registers from the connection page or the CLI.
+        \local_ubionai\local\setup::ensure_defaults('upgrade');
+        if (
+            get_config('local_ubionai', 'consent') === 'accepted'
+                && \local_ubionai\registration\state::get() === \local_ubionai\registration\state::AWAITING_CONSENT
+        ) {
+            \local_ubionai\registration\state::set(\local_ubionai\registration\state::CONSENTED);
+        }
+        upgrade_plugin_savepoint(true, 2026110300, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110500) {
+        // 0.7.3: no data change. local_ubionai_add_sections and local_ubionai_add_quiz_questions are
+        // now declared on the ubionai_user service; core attaches them to the existing service after
+        // this hook (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026110500, 'local', 'ubionai');
+    }
+
+    if ($oldversion < 2026110501) {
+        // 0.7.4: no data change. local_ubionai_delete_modules and local_ubionai_delete_sections are
+        // now declared on the ubionai_user service; core attaches them to the existing service after
+        // this hook (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026110501, 'local', 'ubionai');
     }
 
     return true;

@@ -43,10 +43,16 @@ class create_badge extends external_api {
             'courseid' => new external_value(PARAM_INT, 'Course id'),
             'name' => new external_value(PARAM_TEXT, 'Badge name'),
             'description' => new external_value(PARAM_TEXT, 'Badge description'),
-            'criteria' => new external_value(PARAM_RAW,
-                'JSON object: {"activities": [cmid, ...], "min_course_grade": float|null}'),
-            'enable' => new external_value(PARAM_BOOL, 'Enable the badge (and award it to users who already qualify)',
-                VALUE_DEFAULT, false),
+            'criteria' => new external_value(
+                PARAM_RAW,
+                'JSON object: {"activities": [cmid, ...], "min_course_grade": float|null}'
+            ),
+            'enable' => new external_value(
+                PARAM_BOOL,
+                'Enable the badge (and award it to users who already qualify)',
+                VALUE_DEFAULT,
+                false
+            ),
         ]);
     }
 
@@ -60,8 +66,13 @@ class create_badge extends external_api {
      * @param bool $enable whether to enable the badge
      * @return array
      */
-    public static function execute(int $courseid, string $name, string $description, string $criteria,
-            bool $enable = false): array {
+    public static function execute(
+        int $courseid,
+        string $name,
+        string $description,
+        string $criteria,
+        bool $enable = false
+    ): array {
         global $CFG, $DB, $SITE;
         require_once($CFG->libdir . '/badgeslib.php');
         require_once($CFG->libdir . '/completionlib.php');

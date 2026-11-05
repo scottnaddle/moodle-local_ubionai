@@ -24,6 +24,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Tests for local_ubionai_list_course_assignments.
  *
+ * @covers \local_ubionai\external\list_course_assignments
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

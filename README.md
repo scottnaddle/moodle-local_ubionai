@@ -1,10 +1,10 @@
 # local_ubionai
 
-Moodle 5.x local plugin that exposes a few course-authoring operations as web service
+Moodle 4.5 LTS ~ 5.x local plugin that exposes a few course-authoring operations as web service
 functions, for use by the UbionAI / moodle-agent-mcp server. No database tables; uninstalls cleanly.
 
-* Component: `local_ubionai` — install to `public/local/ubionai`
-* Requires Moodle 5.3 LTS+ (2026100500)
+* Component: `local_ubionai` — install to `local/ubionai` (Moodle 4.5, 5.0) or `public/local/ubionai` (Moodle 5.1+)
+* Requires Moodle 4.5 LTS+ (2024100700); supported on Moodle 4.5 LTS ~ 5.3
 
 ## Functions
 
@@ -121,6 +121,26 @@ unknown section numbers raise `invalid_parameter_exception`. Requires `moodle/co
 `names` by position). Appends the sections to the end of the course (at most 50 per call).
 Returns `{sections: [{id, section}]}`. Requires `moodle/course:update`.
 
+### `local_ubionai_delete_modules`
+
+`courseid`, `cmids` (list of course module ids). Deletes each activity with
+`course_delete_module($cmid, true)`: asynchronously when a plugin (the recycle bin) supports it,
+synchronously otherwise. Modules that do not exist or belong to another course are reported in
+`failed` instead of aborting the batch; duplicate ids are processed once. Returns
+`{deleted: [{cmid, name, modname}], failed: [{cmid, reason}]}`. Requires
+`moodle/course:manageactivities` in the course and in each module context.
+
+### `local_ubionai_delete_sections`
+
+`courseid`, `sectionnums` (list of section numbers). Deletes the sections from the highest number
+to the lowest (deleting a section renumbers the ones above it) with
+`course_delete_section($course, $sectionnum, true, true)`, including their activities. Section 0
+is always rejected, and sections that do not belong to the course are reported in `failed`.
+Returns `{deleted: [{sectionnum, name, modules: [{cmid, name, modname}]}],
+failed: [{sectionnum, reason}]}`. Requires `moodle/course:update` and
+`moodle/course:manageactivities` in the course context, and `moodle/course:manageactivities` in
+each contained module's context.
+
 ### `local_ubionai_set_section_availability`
 
 `courseid`, `section` (number), `availability` (core_availability JSON tree; `''` = no restrictions).
@@ -178,7 +198,7 @@ example to grade them). Requires both capabilities; hidden course modules are om
 
 ## Setup
 
-1. Copy this directory to `public/local/ubionai` and run the upgrade.
+1. Copy this directory to `local/ubionai` (Moodle 4.5, 5.0) or `public/local/ubionai` (Moodle 5.1+), then run the upgrade.
 2. Add the functions to the external service used by the bot's token.
 
 ## Connection
@@ -275,6 +295,70 @@ Values are trimmed, canonicalised and deduplicated before being stored (maximum 
 invalid values, host bits in a CIDR, zone ids and hostnames exit with code 2. The value requires
 `--connect`.
 
+## Teacher OAuth connections (Easy Connect spike, hub-staging trial)
+
+Teachers connect Claude with their own Moodle login; the hub then calls Moodle with a token of that
+teacher, limited to the `ubionai_user` service. Endpoints:
+
+| Path | Who | What |
+|---|---|---|
+| `oauth/authorize.php?req=…` | teacher's browser | verifies the hub's signed request, `require_login`, refuses site administrators and users without `local/ubionai:connect` in any course (editing and non-editing teachers by default), shows a consent page (user, site, client, hub, scope), then redirects to `{hub_url}/t/{hub_site_id}/oauth/callback?code=…&state=…` (one-time code, 2 minutes) or `?error=access_denied` |
+| `oauth/exchange.php` (POST `assertion`) | hub back channel | verifies the signed assertion, consumes the code, assigns the role `ubionai_wsuser` (only `webservice/rest:use`) at system level, authorises the user on `ubionai_user` and mints a token (30 days, name `ubionai-user`); returns `{userid, tokenid, wstoken, validuntil}` |
+| `oauth/revoke.php` (POST `assertion`) | hub back channel | deletes one `ubionai_user` token of that user |
+| `connections.php` | the user (profile > Claude connections) | lists the user's `ubionai_user` tokens, revoke |
+
+Tokens are only ever minted or revoked for the `ubionai_user` service (`moodle_mobile_app` and other
+services are refused in code) and never for site administrators. When a user's last connection is
+revoked, the service authorisation and the role are removed.
+
+Settings (all three required; values come from the hub operator):
+
+- `local_ubionai/hub_url` — hub public URL, e.g. `https://hub-staging.ubion.global`
+- `local_ubionai/hub_site_id` — the `<site>` of `https://hub/t/<site>/mcp`
+- `local_ubionai/oauth_secret` — shared secret, the same value as the hub file
+  `secrets/tenants/<site>/oauth.secret` (at least 32 characters). Messages are
+  `base64url(json) . "." . base64url(HMAC-SHA256(secret, "ubionai-oauth-v1." . body))` with claims
+  `typ`, `aud` (= `$CFG->wwwroot`), `site` and `exp`.
+
+### Self-registered sites (shared secret, `/m/<host_key>`)
+
+A site that registered itself with the hub (consent given, secret confirmed) does not use the
+settings above. `local_ubionai\local\oauth` then switches to the `shared_secret` mode on its own:
+
+* **Key** — `HKDF-SHA256(ikm = site secret, salt = "ubionai-site-v1", info = "oauth-mac|<site_key>|v<n>")`,
+  32 bytes, where `n` is the `kv` claim of the message (the current secret version, or the not yet
+  promoted one during a rotation). The secret itself is stored encrypted and never shown.
+* **Site id** — the `site` claim is the `site_key` the hub assigned at registration (not `hub_site_id`).
+* **Audience** — the `aud` claim is the hub's canonical site URL (lower-case host, no `:443`, no
+  trailing slash), compared against `$CFG->wwwroot` in the same normalisation.
+* **Callback** — `{hub}/m/<host_key>/oauth/callback`, taken from the `allowed_callbacks` the hub
+  returned at registration; the `iss` claim must be that `/m/` issuer. Only `/m/` callbacks are
+  accepted in this mode.
+* **Everything else stays the same**: the message format (`base64url(json) . "." . base64url(HMAC)`),
+  the `typ`/`aud`/`site`/`exp` checks, the one-time code, `oauth/exchange.php` and `oauth/revoke.php`.
+
+A site that is not registered (no confirmed secret, consent withdrawn, or the self-registration
+switch off) keeps the legacy `oauth_secret` + `{hub_url}/t/{hub_site_id}/oauth/callback` path
+unchanged.
+
+## Hub self-registration: decisions of 2026-11-03 (contract §8.3)
+
+* **Default hub.** An empty `local_ubionai/hub_url` uses `https://mcp.ubion.global`
+  (`registrar::DEFAULT_HUB`). Administrators can set another hub URL.
+* **New sites** are created by the hub as `active` at the lowest tier (`limited`). The hub operator
+  can turn auto-activation off (the site then shows "pending") or disable a single site (the plugin
+  then reports `host_blocked`).
+* **Limits** come from hub configuration (provisional: 5 teachers, 200 requests per day). The plugin
+  shows `tenant.limits` exactly as the hub reports them (`max_teachers`, `daily_requests`,
+  `concurrency`, `llm_proxy`); it does not enforce them.
+* **Re-registration** always sends `site_identifier_hash`. The hub keeps teacher connections only
+  when it matches the recorded value; its `grants_kept` answer is shown on the connection page and
+  in `cli/register.php --status`.
+* **Operator-managed host**: `409 site_managed_by_operator`; the operator links the site by hand.
+* **Secrets**: HKDF / hash design unchanged. `tests/registration/secret_logging_test.php` checks that
+  no form of `site_secret` or the derived MAC key reaches output/mtrace, debugging, `error_log`,
+  log events or the config log.
+
 ## Privacy
 
 The plugin itself stores no personal data in Moodle and has no database tables or user preferences.
@@ -285,10 +369,43 @@ no-ops until hub-side handling ships in a later iteration.
 
 ## Installation
 
-Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 5.3 LTS or later, `requires = 2026100500`),
-then run the upgrade (`php admin/cli/upgrade.php`).
+Clone or copy this repository into `<moodleroot>/local/ubionai` (Moodle 4.5 LTS, 5.0) or
+`<moodleroot>/public/local/ubionai` (Moodle 5.1 and later; `requires = 2024100700`, supported on
+Moodle 4.5 LTS ~ 5.3), then run the upgrade (`php admin/cli/upgrade.php`).
 
 ## History
+
+### 0.7.4 (2026110501)
+
+* New write functions `local_ubionai_delete_modules` and `local_ubionai_delete_sections`, also
+  declared on the `ubionai_user` service. Both delete asynchronously when the recycle bin supports
+  it, report failures per item instead of aborting the batch, and leave section numbers stable by
+  deleting from the highest section number down.
+* New tests: `tests/external/delete_modules_test.php` and
+  `tests/external/delete_sections_test.php`.
+
+### 0.7.2 (2026110302)
+
+* Teacher OAuth now works on a self-registered site: when the hub confirmed a site secret,
+  `local_ubionai\local\oauth` verifies hub messages with the HKDF-derived MAC key of the `kv`
+  version and accepts the `{hub}/m/<host_key>/oauth/callback` of the registration result, instead of
+  the legacy `oauth_secret` + `/t/` path. The `site` claim is the `site_key`, the `aud` claim is
+  compared in the hub's canonical URL form, and the `iss` claim must be the `/m/` issuer. Sites that
+  are not registered keep the legacy path unchanged. `oauth/exchange.php` and `oauth/revoke.php`
+  follow the same rule.
+* New tests: `tests/local/oauth_registered_test.php` (both modes, refused callbacks, refused
+  signatures, rotation versions).
+
+### 0.6.1-spike4-wp0 (2026110204)
+
+* Moodle compatibility: the plugin now supports Moodle 4.5 LTS through Moodle 5.3
+  (`requires = 2024100700`, `supported = [405, 503]`). Previously it required Moodle 5.3 LTS.
+* PHPUnit data providers now also carry `@dataProvider` docblock annotations next to the existing
+  `#[DataProvider]` attributes, so the test suite runs on Moodle 4.5 (PHPUnit 9.6) as well as on
+  Moodle 5.x (PHPUnit 11).
+* The service user is created with the API the running core provides: `user_create_user()` on
+  Moodle 4.5, `\core\user::create_user()` from Moodle 5.3 (where the old function is deprecated).
+* CI now tests Moodle 4.5 (PHP 8.1 and 8.3), 5.0 (8.2), 5.1 (8.3), 5.2 (8.4) and 5.3 (8.4) on PostgreSQL.
 
 ### 0.5.1 (2026103106)
 

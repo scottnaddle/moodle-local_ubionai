@@ -1,0 +1,39 @@
+{
+  "description": "Interop vectors for the site self-registration contract v1 (shared_secret). All values are FAKE and only for tests (hub pytest + local_ubionai PHPUnit).",
+  "site_url": "https://LMS.School.example/moodle/",
+  "canonical_site_url": "https://lms.school.example/moodle",
+  "host_key": "lms.school.example/moodle",
+  "site_key": "lms-school-example-moodle-0d9094",
+  "site_secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "secret_hash_hex": "ea866a757e4c38babfa8127cbe9a409d3e1f93a00ff1488ff735fcf917afffd0",
+  "secret_version": 1,
+  "hkdf": {
+    "hash": "SHA-256",
+    "ikm": "UTF-8 bytes of site_secret exactly as transmitted (the base64url string)",
+    "salt": "ubionai-site-v1",
+    "info": "oauth-mac|lms-school-example-moodle-0d9094|v1",
+    "length": 32,
+    "php": "hash_hkdf('sha256', $site_secret, 32, $info, 'ubionai-site-v1')"
+  },
+  "mac_key_hex": "c096403c423d877f94b84090d34b989fe9012f8b2653b7ecac12b9c47ac6bb60",
+  "callback_challenge": {
+    "challenge_b64url": "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8",
+    "challenge_sha256": "ctu3M2x2eAAj-D2kw1Xy7uqFczsT00d2l5F3kMEikIQ",
+    "rule": "challenge_sha256 = base64url(SHA-256(base64url_decode(challenge)))"
+  },
+  "message": {
+    "format": "base64url(json(sort_keys, compact)) '.' base64url(HMAC-SHA256(mac_key, 'ubionai-oauth-v1.' + body))",
+    "claims": {
+      "typ": "authz_req",
+      "iss": "https://hub.example/m/lms.school.example/moodle",
+      "aud": "https://lms.school.example/moodle",
+      "site": "lms-school-example-moodle-0d9094",
+      "state": "fixed-state-for-vectors",
+      "callback": "https://hub.example/m/lms.school.example/moodle/oauth/callback",
+      "exp": 1793664000,
+      "jti": "fixed-jti",
+      "kv": 1
+    },
+    "token": "eyJhdWQiOiJodHRwczovL2xtcy5zY2hvb2wuZXhhbXBsZS9tb29kbGUiLCJjYWxsYmFjayI6Imh0dHBzOi8vaHViLmV4YW1wbGUvbS9sbXMuc2Nob29sLmV4YW1wbGUvbW9vZGxlL29hdXRoL2NhbGxiYWNrIiwiZXhwIjoxNzkzNjY0MDAwLCJpc3MiOiJodHRwczovL2h1Yi5leGFtcGxlL20vbG1zLnNjaG9vbC5leGFtcGxlL21vb2RsZSIsImp0aSI6ImZpeGVkLWp0aSIsImt2IjoxLCJzaXRlIjoibG1zLXNjaG9vbC1leGFtcGxlLW1vb2RsZS0wZDkwOTQiLCJzdGF0ZSI6ImZpeGVkLXN0YXRlLWZvci12ZWN0b3JzIiwidHlwIjoiYXV0aHpfcmVxIn0.b0YZNBCqhj_Q_0OHZX0XZa3QtLPKulhlTtIyQQXGUGk"
+  }
+}

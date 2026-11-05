@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake interop test vectors (no real secrets)"
+paths = ['''^tests/fixtures/registration-v1\.json$''']

@@ -367,8 +367,10 @@ class helper {
                 $defaults = [
                     'packagefile' => 0,
                     'grade' => 100,
-                    'displayoptions' => \core_h5p\helper::get_display_options($core,
-                        \core_h5p\helper::decode_display_options($core)),
+                    'displayoptions' => \core_h5p\helper::get_display_options(
+                        $core,
+                        \core_h5p\helper::decode_display_options($core)
+                    ),
                     'enabletracking' => 1,
                     'grademethod' => 1, // \mod_h5pactivity\local\manager::GRADEHIGHESTATTEMPT.
                     'reviewmode' => 1, // \mod_h5pactivity\local\manager::REVIEWCOMPLETION.
@@ -414,9 +416,11 @@ class helper {
         }
         if (array_key_exists('completion', $settings)) {
             $completion = $settings['completion'];
-            if (is_bool($completion) || !is_numeric($completion)
+            if (
+                is_bool($completion) || !is_numeric($completion)
                     || !in_array((int) $completion, [COMPLETION_TRACKING_NONE, COMPLETION_TRACKING_MANUAL,
-                        COMPLETION_TRACKING_AUTOMATIC], true)) {
+                        COMPLETION_TRACKING_AUTOMATIC], true)
+            ) {
                 throw new invalid_parameter_exception('settings.completion must be 0 (none), 1 (manual) or 2 (automatic)');
             }
             $settings['completion'] = (int) $completion;
@@ -436,8 +440,10 @@ class helper {
         }
 
         // Forum ratings: a positive scale means "point" ratings out of that maximum.
-        if ($modname === 'forum' && !empty($moduleinfo->scale) && empty($moduleinfo->assessed)
-                && !array_key_exists('assessed', $settings)) {
+        if (
+            $modname === 'forum' && !empty($moduleinfo->scale) && empty($moduleinfo->assessed)
+                && !array_key_exists('assessed', $settings)
+        ) {
             $moduleinfo->assessed = 1; // RATING_AGGREGATE_AVERAGE.
         }
 
@@ -526,11 +532,18 @@ class helper {
             }
             if ($moduleinfo->files !== 0) {
                 $usercontext = \context_user::instance($USER->id);
-                $files = get_file_storage()->get_area_files($usercontext->id, 'user', 'draft', $moduleinfo->files,
-                    'id', false);
+                $files = get_file_storage()->get_area_files(
+                    $usercontext->id,
+                    'user',
+                    'draft',
+                    $moduleinfo->files,
+                    'id',
+                    false
+                );
                 if (!$files) {
                     throw new invalid_parameter_exception(
-                        "settings.files: draft area {$moduleinfo->files} of the current user contains no files");
+                        "settings.files: draft area {$moduleinfo->files} of the current user contains no files"
+                    );
                 }
             }
         }
@@ -579,11 +592,18 @@ class helper {
                 }
                 if ($moduleinfo->packagefile !== 0) {
                     $usercontext = \context_user::instance($USER->id);
-                    $files = get_file_storage()->get_area_files($usercontext->id, 'user', 'draft', $moduleinfo->packagefile,
-                        'id', false);
+                    $files = get_file_storage()->get_area_files(
+                        $usercontext->id,
+                        'user',
+                        'draft',
+                        $moduleinfo->packagefile,
+                        'id',
+                        false
+                    );
                     if (count($files) !== 1 || !preg_match('/\.h5p$/i', reset($files)->get_filename())) {
                         throw new invalid_parameter_exception(
-                            "settings.packagefile: draft area {$moduleinfo->packagefile} must contain exactly one .h5p file");
+                            "settings.packagefile: draft area {$moduleinfo->packagefile} must contain exactly one .h5p file"
+                        );
                     }
                 }
                 break;
@@ -878,8 +898,12 @@ class helper {
         require_once($CFG->libdir . '/questionlib.php');
 
         $top = question_get_top_category($context->id, true);
-        $category = $DB->get_record('question_categories',
-            ['contextid' => $context->id, 'parent' => $top->id, 'name' => self::QUESTION_CATEGORY], '*', IGNORE_MULTIPLE);
+        $category = $DB->get_record(
+            'question_categories',
+            ['contextid' => $context->id, 'parent' => $top->id, 'name' => self::QUESTION_CATEGORY],
+            '*',
+            IGNORE_MULTIPLE
+        );
         if ($category) {
             return $category;
         }

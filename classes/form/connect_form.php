@@ -38,8 +38,12 @@ class connect_form extends \moodleform {
         $mform->addElement('hidden', 'action', 'connect');
         $mform->setType('action', PARAM_ALPHA);
 
-        $mform->addElement('passwordunmask', 'regcode', get_string('regcode', 'local_ubionai'),
-            ['autocomplete' => 'off']);
+        $mform->addElement(
+            'passwordunmask',
+            'regcode',
+            get_string('regcode', 'local_ubionai'),
+            ['autocomplete' => 'off']
+        );
         $mform->setType('regcode', PARAM_RAW_TRIMMED);
         $mform->addHelpButton('regcode', 'regcode', 'local_ubionai');
 

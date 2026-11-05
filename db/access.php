@@ -31,4 +31,14 @@ $capabilities = [
         'archetypes' => [],
         'riskbitmask' => RISK_CONFIG | RISK_PERSONAL | RISK_DATALOSS,
     ],
+    // Connect Claude with one's own Moodle login (checked in any course; site admins are refused in code).
+    'local/ubionai:connect' => [
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'teacher' => CAP_ALLOW,
+        ],
+        'riskbitmask' => RISK_PERSONAL,
+    ],
 ];
