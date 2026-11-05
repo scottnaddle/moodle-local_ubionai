@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Korean strings for local_ubionai (hub self-registration). Missing strings fall back to English.
+ * Korean strings for local_ubionai (hub self-registration, connection status). Missing strings fall back to English.
  *
  * @package    local_ubionai
  * @copyright  2026 scottnaddle
@@ -112,3 +112,20 @@ $string['reg_error_invalid_hub_url'] = '허브 URL 설정이 올바르지 않습
 $string['reg_error_plugin_error'] = '플러그인 내부 오류로 등록이 중단되었습니다. [다시 시도]를 누르고, 계속되면 디버깅 로그를 확인하세요.';
 $string['reg_error_retry_exhausted'] = '24시간 후 자동 재시도를 중단했습니다.';
 $string['reg_error_not_consented'] = '동의하지 않았습니다.';
+
+// Admin connection page (connect.php).
+$string['status_connected'] = '연결됨';
+$string['status_notconnected'] = '연결되지 않음';
+$string['status_webservices'] = '웹 서비스 활성화';
+$string['status_rest'] = 'REST 프로토콜 활성화';
+$string['status_serviceuser'] = '서비스 사용자';
+$string['status_role'] = '역할';
+$string['status_service'] = '외부 서비스';
+$string['status_functions'] = '함수 활성화';
+$string['status_authorised'] = '서비스에 승인된 사용자';
+$string['status_tokens'] = '활성 토큰';
+$string['status_untracked_tokens'] = 'UBION AI 서비스 사용자의 토큰 {$a}개가 이 플러그인에서 발급된 것이 아니라 그대로 남아 있습니다. 더 이상 필요하지 않으면 직접 폐기하세요.';
+$string['status_tokencreated'] = '토큰 생성 시각';
+$string['status_tokenvalid'] = '토큰 유효 여부';
+$string['status_tokenlastaccess'] = '토큰 마지막 사용 시각';
+$string['status_never'] = '없음';
