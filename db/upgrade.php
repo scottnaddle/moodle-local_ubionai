@@ -131,5 +131,12 @@ function xmldb_local_ubionai_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026110300, 'local', 'ubionai');
     }
 
+    if ($oldversion < 2026110500) {
+        // 0.7.3: no data change. local_ubionai_add_sections and local_ubionai_add_quiz_questions are
+        // now declared on the ubionai_user service; core attaches them to the existing service after
+        // this hook (upgrade_component_updated -> external_update_descriptions).
+        upgrade_plugin_savepoint(true, 2026110500, 'local', 'ubionai');
+    }
+
     return true;
 }
