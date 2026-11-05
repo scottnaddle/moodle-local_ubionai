@@ -63,6 +63,8 @@ class get_submissions extends external_api {
     public static function execute(int $courseid, int $assignid): array {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/mod/assign/locallib.php');
+        require_once($CFG->dirroot . '/mod/assign/submission/file/locallib.php');
+        require_once($CFG->dirroot . '/mod/assign/submission/onlinetext/locallib.php');
         require_once($CFG->libdir . '/gradelib.php');
         require_once($CFG->dirroot . '/grade/grading/lib.php');
 
@@ -222,7 +224,7 @@ class get_submissions extends external_api {
         $submissions = $DB->get_records_sql($sql, [
             'assignment' => $assign->id,
             'assignmenttwo' => $assign->id,
-            'status' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
+            'status' => \ASSIGN_SUBMISSION_STATUS_SUBMITTED,
         ]);
         if (!$submissions) {
             return [];
@@ -262,8 +264,8 @@ class get_submissions extends external_api {
 
             $files = [];
             $areas = [
-                ['assignsubmission_file', ASSIGNSUBMISSION_FILE_FILEAREA],
-                ['assignsubmission_onlinetext', ASSIGNSUBMISSION_ONLINETEXT_FILEAREA],
+                ['assignsubmission_file', 'submission_files'],
+                ['assignsubmission_onlinetext', 'submissions_onlinetext'],
             ];
             foreach ($areas as [$component, $filearea]) {
                 $storedfiles = $fs->get_area_files(
